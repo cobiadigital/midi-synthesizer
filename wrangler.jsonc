@@ -1,11 +1,28 @@
 // Cloudflare Workers configuration. The synth is a static PWA: no server-side
 // code runs yet, Workers just serves the Vite build over HTTPS (required by
 // Web MIDI and AudioWorklet).
+//
+// Deploys are driven by Workers Builds from the connected GitHub repo, not
+// from a laptop. Pushing to main builds and deploys; any other branch gets a
+// preview version with its own URL. See README for the dashboard setup.
 {
+  "$schema": "node_modules/wrangler/config-schema.json",
   "name": "midi-synthesizer",
   "compatibility_date": "2026-01-01",
+
+  // Serve on <name>.<subdomain>.workers.dev. Swap for a "routes" block when a
+  // custom domain is attached.
+  "workers_dev": true,
+
   "assets": {
     "directory": "./dist",
+    // Every unmatched path returns index.html so deep links and the PWA start
+    // URL work. There is no router yet, but this keeps refreshes from 404ing.
     "not_found_handling": "single-page-application"
+  },
+
+  // Build metadata and errors show up in the dashboard instead of vanishing.
+  "observability": {
+    "enabled": true
   }
 }

@@ -56,18 +56,70 @@ scroll wheel for stepped changes.
 | `npm run typecheck` | TypeScript check with no output |
 | `npm run build` | Typecheck then produce `dist/` |
 | `npm run preview` | Serve the production build locally |
+| `npm run deploy` | Deploy `dist/` to Workers by hand (CI normally does this) |
+| `npm run deploy:version` | Upload a preview version without touching live traffic |
 
 ## Deploying to Cloudflare Workers
 
 The app is entirely static. `wrangler.jsonc` points Workers at the `dist/`
-folder as assets.
+folder as assets, and Web MIDI and AudioWorklet get the HTTPS they require.
+
+Deploys are driven by **Workers Builds** from this GitHub repository, so a
+merge to `main` is the deploy. No local wrangler login and no API token are
+needed for normal work.
+
+### One-time dashboard setup
+
+1. In the Cloudflare dashboard, go to **Compute (Workers) → Create → Import a
+   repository**, and authorize the Cloudflare GitHub app on this repo.
+2. Pick this repository and set:
+
+   | Field | Value |
+   |---|---|
+   | Project name | `midi-synthesizer` |
+   | Production branch | `main` |
+   | Build command | `npm run build` |
+   | Deploy command | `npx wrangler deploy` |
+   | Non-production branch deploy command | `npx wrangler versions upload` |
+   | Root directory | `/` |
+
+3. Leave **Build variables and secrets** empty. Nothing in this project reads
+   an env var at build time. If that changes, add the value once under
+   **Settings → Build → Variables and secrets** so it lives with the project
+   rather than being pasted per build. Anything sensitive goes in as a
+   *secret*, and runtime secrets are set under **Settings → Variables and
+   Secrets** on the Worker itself.
+4. Save. The first build starts immediately and the app lands at
+   `https://midi-synthesizer.<your-subdomain>.workers.dev`.
+
+Node version comes from `.node-version` (currently 22), so the build runner
+and CI stay on the same major as local development.
+
+### What happens on each push
+
+| Event | Result |
+|---|---|
+| Merge to `main` | Build, then `wrangler deploy`. Live URL updates. |
+| Push to any other branch (including PR branches) | Build, then `wrangler versions upload`. A preview version with its own URL, live traffic untouched. |
+
+The preview URL appears in the build log and on the Worker's **Deployments**
+tab, shaped like
+`https://<version-prefix>-midi-synthesizer.<your-subdomain>.workers.dev`. It is
+the fastest way to hear a change on a phone before merging.
+
+GitHub Actions (`.github/workflows/ci.yml`) runs typecheck, tests, and build on
+every pull request. Cloudflare's build only typechecks, so treat a red CI check
+as "do not merge".
+
+### Deploying by hand
+
+Rarely needed, but available:
 
 ```bash
 npm run build
-npx wrangler deploy
+npm run deploy          # wrangler deploy, requires wrangler login
+npm run deploy:version  # upload a preview version instead
 ```
-
-Web MIDI and AudioWorklet both require HTTPS, which Workers provides.
 
 ## Project layout
 
@@ -79,4 +131,5 @@ src/ui/         Knob custom element, panel builder, on-screen keyboard
 src/presets/    Patch JSON (empty until milestone 4)
 test/           Vitest suite that renders audio offline and checks it
 tools/          Optional Python analysis scripts (see tools/README.md)
+.github/        CI workflow run on pull requests
 ```
