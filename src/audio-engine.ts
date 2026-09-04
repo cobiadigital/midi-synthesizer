@@ -1,5 +1,6 @@
-import { PROCESSOR_NAME, type SynthMessage } from "./dsp/messages";
+import { PROCESSOR_NAME, type SynthMessage, type SynthReply } from "./dsp/messages";
 import type { ParamId } from "./dsp/params";
+import type { SynthEvent } from "./dsp/synth";
 import workletUrl from "./worklet/synth-processor.ts?worker&url";
 
 /**
@@ -8,6 +9,9 @@ import workletUrl from "./worklet/synth-processor.ts?worker&url";
  * before audio can start, so `start()` must be called from a click handler.
  */
 export class AudioEngine {
+  /** Called for each arpeggiator event the audio thread reports. */
+  onEvent: ((event: SynthEvent) => void) | null = null;
+
   private context: AudioContext | null = null;
   private node: AudioWorkletNode | null = null;
 
@@ -27,6 +31,9 @@ export class AudioEngine {
       numberOfOutputs: 1,
       outputChannelCount: [2],
     });
+    node.port.onmessage = (event: MessageEvent<SynthReply>) => {
+      for (const e of event.data.events) this.onEvent?.(e);
+    };
     node.connect(context.destination);
     this.context = context;
     this.node = node;

@@ -1,15 +1,16 @@
 /// <reference path="./worklet-globals.d.ts" />
-import { PROCESSOR_NAME, type SynthMessage } from "../dsp/messages";
-import { MonoVoice } from "../dsp/voice";
+import { PROCESSOR_NAME, type SynthMessage, type SynthReply } from "../dsp/messages";
+import { Synth } from "../dsp/synth";
 
 /**
- * Hosts a MonoVoice on the audio rendering thread.
+ * Hosts the synth on the audio rendering thread.
  *
  * All communication is via MessagePort: the main thread never touches audio
- * state directly. Output is mono duplicated to every output channel.
+ * state directly. Output is mono duplicated to every output channel, and
+ * arpeggiator activity is posted back so the UI can follow along.
  */
 class SynthProcessor extends AudioWorkletProcessor {
-  private readonly voice = new MonoVoice(sampleRate);
+  private readonly synth = new Synth(sampleRate);
 
   constructor() {
     super();
@@ -21,16 +22,16 @@ class SynthProcessor extends AudioWorkletProcessor {
   private handle(msg: SynthMessage): void {
     switch (msg.type) {
       case "noteOn":
-        this.voice.noteOn(msg.note, msg.velocity);
+        this.synth.noteOn(msg.note, msg.velocity);
         break;
       case "noteOff":
-        this.voice.noteOff(msg.note);
+        this.synth.noteOff(msg.note);
         break;
       case "allNotesOff":
-        this.voice.allNotesOff();
+        this.synth.allNotesOff();
         break;
       case "param":
-        this.voice.setParam(msg.id, msg.value);
+        this.synth.setParam(msg.id, msg.value);
         break;
     }
   }
@@ -40,9 +41,15 @@ class SynthProcessor extends AudioWorkletProcessor {
     const first = output?.[0];
     if (!output || !first) return true;
 
-    this.voice.render(first);
+    this.synth.render(first);
     for (let ch = 1; ch < output.length; ch++) {
       output[ch]?.set(first);
+    }
+
+    const events = this.synth.takeEvents();
+    if (events.length > 0) {
+      const reply: SynthReply = { type: "events", events };
+      this.port.postMessage(reply);
     }
     return true;
   }

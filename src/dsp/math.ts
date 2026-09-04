@@ -27,3 +27,21 @@ export function onePoleCoef(seconds: number, sampleRate: number): number {
   if (seconds <= 0) return 1;
   return 1 - Math.exp(-1 / (seconds * sampleRate));
 }
+
+/**
+ * Deterministic xorshift32 generator returning 0..1.
+ *
+ * The arpeggiator's random mode needs randomness on the audio thread, where
+ * `Math.random` is fine but untestable. A seeded generator makes the same
+ * pattern reproducible in tests.
+ */
+export function makeRandom(seed = 0x2545f491): () => number {
+  let state = seed >>> 0 || 1;
+  return () => {
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    state >>>= 0;
+    return state / 0x100000000;
+  };
+}
