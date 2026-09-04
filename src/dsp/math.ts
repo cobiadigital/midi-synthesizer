@@ -29,6 +29,20 @@ export function onePoleCoef(seconds: number, sampleRate: number): number {
 }
 
 /**
+ * Rational approximation of tanh, exact enough for saturation duty and about
+ * an order of magnitude cheaper than `Math.tanh`.
+ *
+ * The Pade form would run away past |x| = 3, where it happens to evaluate to
+ * exactly 1, so clamping there is both correct and continuous.
+ */
+export function fastTanh(x: number): number {
+  if (x >= 3) return 1;
+  if (x <= -3) return -1;
+  const x2 = x * x;
+  return (x * (27 + x2)) / (27 + 9 * x2);
+}
+
+/**
  * Deterministic xorshift32 generator returning 0..1.
  *
  * The arpeggiator's random mode needs randomness on the audio thread, where

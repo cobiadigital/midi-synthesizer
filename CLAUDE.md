@@ -84,11 +84,50 @@ key while an older key is held slides back to the older note without
 retriggering the envelope (legato). Glide is a one-pole smoother on the MIDI
 note number, applied per sample. Velocity scales gain between 30% and 100%.
 
+The chain is oscillator into filter into amplifier. Cutoff modulation is
+summed in octaves before the exponential, so the filter envelope, key tracking
+and velocity all move the filter by a musical interval wherever the cutoff
+knob happens to sit. There are two envelopes, triggered and released together.
+
 ### Oscillator
 
 PolyBLEP anti-aliasing. Triangle is a leaky integral of the square. `shape`
 currently only affects square (pulse width). Saw shape and triangle folding
 are reserved for milestone 3.
+
+### Filter
+
+`LadderFilter` in `src/dsp/filter.ts` is a four-pole transistor ladder,
+2x oversampled, with multimode stage taps.
+
+The poles are zero-delay-feedback one-poles and the resonance loop is solved
+in closed form rather than being fed from the previous sample. That is the
+whole reason the filter stays in tune: a unit delay in the feedback path is
+what makes naive ladder models go flat and lose resonance as the cutoff
+climbs. Solved this way the critical feedback is exactly 4 at every cutoff,
+and each pole lands exactly on its -3.01 dB corner at the set frequency.
+There are tests pinning both; do not swap in a delayed-feedback model without
+reading them.
+
+Two nonlinearities give the ladder its character without breaking the closed
+form. The input stage saturates with enough headroom to stay clean at minimum
+drive. The feedback path saturates too, which is what limits self-oscillation
+to a usable level and makes resonance duck under a loud input; it enters the
+solution as an instantaneous gain taken from the previous output, which is
+accurate at twice the sample rate and can only ever reduce the feedback, so
+it cannot destabilise the loop.
+
+Modes come from mixing the stage outputs, the way an Oberheim Xpander derives
+its modes from one ladder: an n-th order highpass is the binomial combination
+of the first n+1 taps, and a bandpass is half the poles of lowpass feeding the
+other half of highpass. Resonance always comes off the fourth pole, so every
+mode resonates at the cutoff. Because the taps differ by whole poles, the gap
+between the 12 dB and 6 dB modes is exactly one pole's response, which is what
+the tuning tests measure.
+
+Decimation is a two-tap average, a one-zero filter with its null at the base
+sample rate. Not a brick wall, but the harmonics drive generates are low order
+and it keeps them from folding back audibly.
 
 ### Envelope
 
@@ -136,9 +175,11 @@ Setup steps for the dashboard live in README.md.
 ## Roadmap
 
 1. **Done.** Scaffold, one oscillator, amp envelope, MIDI in, keyboard UI.
-2. Second VCO with pitch and detune, sub oscillator, noise, mixer. Moog
-   ladder filter (Huovilainen model, oversampled 2x) with cutoff, resonance,
-   drive, key tracking, and envelope amount. Filter envelope.
+2. Filter **done**: zero-delay-feedback ladder with eight multimode responses,
+   cutoff, resonance to self-oscillation, drive, key tracking, velocity, and
+   a dedicated filter envelope with a bipolar amount. Still to do: second VCO
+   with pitch and detune, sub oscillator, noise, and the mixer that feeds them
+   all into the filter.
 3. LFO with rate, wave, and target (pitch, shape, cutoff). Oscillator sync,
    ring mod, cross mod. Saw shape and triangle fold. Mod wheel and velocity
    routing.

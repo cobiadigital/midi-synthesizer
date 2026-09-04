@@ -7,9 +7,13 @@ feature set with a Moog-style ladder filter.
 
 ## Status
 
-Milestone 1 of 5, plus the arpeggiator from milestone 5. Current features:
+Milestone 1 of 5, plus the filter from milestone 2 and the arpeggiator from
+milestone 5. Current features:
 
 - One anti-aliased oscillator (saw, square, triangle) with shape control
+- Four-pole ladder filter with eight responses, drive, and resonance that
+  self-oscillates in tune
+- Filter envelope with a bipolar amount, key tracking, and velocity routing
 - ADSR amplitude envelope
 - Mono voice with last-note priority, legato, and glide
 - Arpeggiator with six note orders, a four-octave range, and latch
@@ -18,8 +22,8 @@ Milestone 1 of 5, plus the arpeggiator from milestone 5. Current features:
 - Web MIDI input, on-screen keyboard, and computer-keyboard playing
 - Offline-testable DSP core
 
-Coming next: second oscillator and mixer, Moog ladder filter, filter
-envelope, LFO and modulation routing, presets, delay and chorus.
+Coming next: second oscillator, sub oscillator, noise and mixer, LFO and
+modulation routing, presets, delay and chorus.
 See [CLAUDE.md](./CLAUDE.md) for the roadmap and architecture.
 
 ## Requirements
@@ -48,6 +52,31 @@ start audio without a click, so the button is not optional.
 
 Knobs: drag up and down, hold Shift for fine control, double-click to reset,
 scroll wheel for stepped changes.
+
+## Filter
+
+A four-pole transistor ladder. The **Mode** knob mixes its stage outputs, so
+every response comes from the same filter and resonates at the same cutoff.
+
+| Mode | What it does |
+|---|---|
+| `LP 24` / `LP 12` / `LP 6` | Lowpass at four, two, and one pole. 24 is the classic thick one, 6 is barely a tone control |
+| `BP 24` / `BP 12` | Bandpass, two poles either side or one |
+| `Notch` | Rejects the cutoff, passes everything else |
+| `HP 12` / `HP 24` | Highpass at two and four poles |
+
+| Knob | What it does |
+|---|---|
+| FILTER → Cutoff | 20 Hz to 18 kHz |
+| FILTER → Reso | Emphasis at the cutoff. The top eighth of the knob self-oscillates, in tune, so the filter becomes a sine oscillator you can play with key tracking |
+| FILTER → Drive | Pushes the ladder's input stage into saturation. Clean at the bottom of the knob |
+| FILTER → Key | Cutoff follows the keyboard. At 1.0 it tracks semitone for semitone |
+| FILTER → EG Int | How far the filter envelope moves the cutoff, in octaves. Negative amounts close the filter instead of opening it |
+| FILTER → Vel | How far velocity opens the filter, up to three octaves |
+| FILT EG | A dedicated ADSR for the filter, triggered with every note |
+
+Resonance thins the low end as it climbs, the way the original does. Drive
+gets that weight back.
 
 ## Arpeggiator
 

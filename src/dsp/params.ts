@@ -8,11 +8,23 @@
 
 import { ARP_MODES } from "./arpeggiator";
 import { DEFAULT_DIVISION, DIVISION_LABELS } from "./clock";
+import { FILTER_MODES } from "./filter";
 
 export type ParamId =
   | "osc1Wave"
   | "osc1Octave"
   | "osc1Shape"
+  | "filterMode"
+  | "cutoff"
+  | "resonance"
+  | "drive"
+  | "keyTrack"
+  | "filterEgAmount"
+  | "filterVelocity"
+  | "filtAttack"
+  | "filtDecay"
+  | "filtSustain"
+  | "filtRelease"
   | "ampAttack"
   | "ampDecay"
   | "ampSustain"
@@ -55,6 +67,17 @@ export const PARAMS: readonly ParamDef[] = [
   { id: "osc1Wave", label: "Wave", group: "VCO 1", min: 0, max: 2, default: 0, step: 1, choices: [...WAVEFORMS] },
   { id: "osc1Octave", label: "Octave", group: "VCO 1", min: -2, max: 2, default: 0, step: 1, choices: ["16'", "8'", "4'", "2'", "1'"] },
   { id: "osc1Shape", label: "Shape", group: "VCO 1", min: 0, max: 1, default: 0 },
+  { id: "filterMode", label: "Mode", group: "FILTER", min: 0, max: FILTER_MODES.length - 1, default: 0, step: 1, choices: [...FILTER_MODES] },
+  { id: "cutoff", label: "Cutoff", group: "FILTER", min: 20, max: 18000, default: 12000, taper: "log", unit: "Hz" },
+  { id: "resonance", label: "Reso", group: "FILTER", min: 0, max: 1, default: 0 },
+  { id: "drive", label: "Drive", group: "FILTER", min: 0, max: 1, default: 0 },
+  { id: "keyTrack", label: "Key", group: "FILTER", min: 0, max: 1, default: 0 },
+  { id: "filterEgAmount", label: "EG Int", group: "FILTER", min: -5, max: 5, default: 0, unit: "oct" },
+  { id: "filterVelocity", label: "Vel", group: "FILTER", min: 0, max: 1, default: 0 },
+  { id: "filtAttack", label: "Attack", group: "FILT EG", min: 0.001, max: 5, default: 0.005, taper: "log", unit: "s" },
+  { id: "filtDecay", label: "Decay", group: "FILT EG", min: 0.001, max: 5, default: 0.3, taper: "log", unit: "s" },
+  { id: "filtSustain", label: "Sustain", group: "FILT EG", min: 0, max: 1, default: 0.5 },
+  { id: "filtRelease", label: "Release", group: "FILT EG", min: 0.001, max: 5, default: 0.25, taper: "log", unit: "s" },
   { id: "ampAttack", label: "Attack", group: "AMP EG", min: 0.001, max: 5, default: 0.005, taper: "log", unit: "s" },
   { id: "ampDecay", label: "Decay", group: "AMP EG", min: 0.001, max: 5, default: 0.3, taper: "log", unit: "s" },
   { id: "ampSustain", label: "Sustain", group: "AMP EG", min: 0, max: 1, default: 0.8 },
