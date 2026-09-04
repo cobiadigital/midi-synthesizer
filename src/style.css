@@ -11,6 +11,25 @@
 
 * { box-sizing: border-box; }
 
+/* This is an instrument, not a document. iOS long-press would otherwise pop
+   the Copy / Look Up / Translate callout and highlight the panel labels
+   mid-gesture, and the selection anchor drifts outside whichever container
+   the touch started in, so the lock has to be document-wide rather than
+   scoped to #panel and .screen-keyboard. Anything genuinely worth copying
+   opts back in with .selectable below. */
+html {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.selectable {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
 body {
   margin: 0;
   background: var(--bg);
@@ -71,22 +90,9 @@ h1 small {
   margin-bottom: 16px;
 }
 
-/* Panel and keyboard are instruments, not prose: never let a drag on them
-   turn into a text selection. #status stays selectable. */
-#panel,
-.screen-keyboard {
-  -webkit-user-select: none;
-  user-select: none;
-  -webkit-touch-callout: none;
-}
-
-/* Held for the duration of a knob drag, for pen and touch where the
-   mousedown cancellation in knob.ts never fires. */
-body.dragging {
-  -webkit-user-select: none;
-  user-select: none;
-  cursor: ns-resize;
-}
+/* Held for the duration of a knob drag: the ns-resize cursor follows the
+   pointer anywhere on the page, not just over the knob. */
+body.dragging { cursor: ns-resize; }
 
 #panel {
   width: 100%;
