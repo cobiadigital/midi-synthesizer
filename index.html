@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#141414" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <title>Mono Synth</title>
+  </head>
+  <body>
+    <header>
+      <h1>Mono Synth <small>Subtractive monosynth in the browser</small></h1>
+      <button id="start" type="button">Start audio</button>
+    </header>
+    <p id="status">Click Start audio, then play a MIDI keyboard, the on-screen keys, or A through K.</p>
+    <main id="panel"></main>
+    <div id="keyboard"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
