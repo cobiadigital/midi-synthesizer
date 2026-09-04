@@ -14,6 +14,7 @@ export class SynthKnob extends HTMLElement {
   private _value = 0;
   private dragStartY = 0;
   private dragStartNorm = 0;
+  private lastTapAt = 0;
 
   private readonly indicator: SVGLineElement;
   private readonly arc: SVGPathElement;
@@ -60,6 +61,11 @@ export class SynthKnob extends HTMLElement {
       this.focus();
     });
     this.addEventListener("dragstart", (event) => event.preventDefault());
+    // See keyboard.ts: on iOS the long-press selection comes off the touch
+    // stream regardless of user-select, so the gesture has to be cancelled
+    // here. This also costs the synthesized dblclick, which onPointerDown
+    // replaces with its own double-tap check.
+    this.addEventListener("touchstart", (event) => event.preventDefault(), { passive: false });
   }
 
   bind(def: ParamDef, value: number): void {
@@ -92,6 +98,16 @@ export class SynthKnob extends HTMLElement {
   }
 
   private readonly onPointerDown = (event: PointerEvent): void => {
+    // Touch gets its own double-tap reset because cancelling touchstart above
+    // stops Safari from synthesizing the dblclick the mouse path relies on.
+    if (event.pointerType !== "mouse") {
+      const doubleTap = event.timeStamp - this.lastTapAt < 300;
+      this.lastTapAt = doubleTap ? 0 : event.timeStamp;
+      if (doubleTap) {
+        this.commit(this.def.default);
+        return;
+      }
+    }
     this.setPointerCapture(event.pointerId);
     this.dragStartY = event.clientY;
     this.dragStartNorm = this.toNorm(this._value);

@@ -6,6 +6,15 @@ import { ScreenKeyboard } from "./ui/keyboard";
 import { Panel } from "./ui/panel";
 import "./style.css";
 
+// Last line of defence for the panel and keyboard: WebKit can still anchor a
+// selection when a gesture starts on a non-selectable element, so refuse to
+// begin one anywhere outside explicitly opted-in text.
+document.addEventListener("selectstart", (event) => {
+  const target = event.target as Element | null;
+  const node = target?.nodeType === Node.ELEMENT_NODE ? target : target?.parentElement ?? null;
+  if (!node?.closest(".selectable")) event.preventDefault();
+});
+
 const engine = new AudioEngine();
 const patch = defaultPatch();
 

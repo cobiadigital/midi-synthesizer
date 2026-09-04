@@ -37,6 +37,12 @@ export class ScreenKeyboard {
     // start a document selection and sweep the page text above the keyboard.
     container.addEventListener("mousedown", (event) => event.preventDefault());
     container.addEventListener("dragstart", (event) => event.preventDefault());
+    // iOS decides to start a selection from the touch stream, not from the
+    // pointer events, and does so even where user-select is none. Cancelling
+    // touchstart is what actually stops the long-press callout. Safari has
+    // already dispatched pointerdown by this point, so the note still sounds;
+    // nothing here needs the synthesized click.
+    container.addEventListener("touchstart", (event) => event.preventDefault(), { passive: false });
     container.addEventListener("pointerdown", this.onPointerDown);
     container.addEventListener("pointermove", this.onPointerMove);
     container.addEventListener("pointerup", this.onPointerUp);
