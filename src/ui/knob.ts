@@ -51,6 +51,15 @@ export class SynthKnob extends HTMLElement {
     this.addEventListener("pointerdown", this.onPointerDown);
     this.addEventListener("dblclick", () => this.commit(this.def.default));
     this.addEventListener("wheel", this.onWheel, { passive: false });
+    // A mouse drag starting here would otherwise anchor a document selection
+    // and sweep the surrounding panel text as the pointer moves. Cancelling
+    // mousedown suppresses that (and the native image drag) while leaving
+    // click and dblclick intact; focus has to be taken by hand as a result.
+    this.addEventListener("mousedown", (event) => {
+      event.preventDefault();
+      this.focus();
+    });
+    this.addEventListener("dragstart", (event) => event.preventDefault());
   }
 
   bind(def: ParamDef, value: number): void {
@@ -86,12 +95,15 @@ export class SynthKnob extends HTMLElement {
     this.setPointerCapture(event.pointerId);
     this.dragStartY = event.clientY;
     this.dragStartNorm = this.toNorm(this._value);
+    // Belt and braces for pen and touch, where mousedown never fires.
+    document.body.classList.add("dragging");
     const move = (e: PointerEvent) => {
       const pixelsForFullRange = e.shiftKey ? 1200 : 200;
       const delta = (this.dragStartY - e.clientY) / pixelsForFullRange;
       this.commit(this.fromNorm(this.dragStartNorm + delta));
     };
     const up = () => {
+      document.body.classList.remove("dragging");
       this.removeEventListener("pointermove", move);
       this.removeEventListener("pointerup", up);
       this.removeEventListener("pointercancel", up);
