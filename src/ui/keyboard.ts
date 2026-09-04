@@ -33,6 +33,10 @@ export class ScreenKeyboard {
       container.appendChild(key);
       this.keys.set(note, key);
     }
+    // Same reason as the knob: a mouse drag across the keys would otherwise
+    // start a document selection and sweep the page text above the keyboard.
+    container.addEventListener("mousedown", (event) => event.preventDefault());
+    container.addEventListener("dragstart", (event) => event.preventDefault());
     container.addEventListener("pointerdown", this.onPointerDown);
     container.addEventListener("pointermove", this.onPointerMove);
     container.addEventListener("pointerup", this.onPointerUp);

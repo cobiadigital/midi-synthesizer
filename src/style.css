@@ -71,6 +71,23 @@ h1 small {
   margin-bottom: 16px;
 }
 
+/* Panel and keyboard are instruments, not prose: never let a drag on them
+   turn into a text selection. #status stays selectable. */
+#panel,
+.screen-keyboard {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Held for the duration of a knob drag, for pen and touch where the
+   mousedown cancellation in knob.ts never fires. */
+body.dragging {
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: ns-resize;
+}
+
 #panel {
   width: 100%;
   max-width: 960px;
