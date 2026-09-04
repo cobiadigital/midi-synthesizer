@@ -87,6 +87,33 @@ h1 small {
 
 #start:disabled { opacity: 0.6; cursor: default; }
 
+.transport {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Blinks on every arpeggiator step, brighter on the count of four. Nothing
+   drives it while the arpeggiator is idle: the clock only runs under notes. */
+.beat-led {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #2c2c2c;
+  border: 1px solid var(--panel-edge);
+  transition: background 90ms ease-out, box-shadow 90ms ease-out;
+}
+
+.beat-led.on {
+  background: var(--accent);
+  box-shadow: 0 0 8px rgba(245, 166, 35, 0.7);
+}
+
+.beat-led.on.downbeat {
+  background: #fff2d8;
+  box-shadow: 0 0 12px rgba(245, 166, 35, 0.95);
+}
+
 #status {
   width: 100%;
   max-width: 960px;
@@ -179,6 +206,13 @@ body.dragging { cursor: ns-resize; }
 
 .key.held.white { background: var(--accent); }
 .key.held.black::after { background: var(--accent); }
+
+/* Arpeggiator steps get their own, cooler highlight so a key you are holding
+   stays visibly held while the pattern runs over and past it. */
+.key.arp.white { background: #7fd4ff; }
+.key.arp.black::after { background: #4aa9d8; }
+.key.arp.held.white { background: #ffd27f; }
+.key.arp.held.black::after { background: #d8a24a; }
 
 body:not(.audio-on) #panel,
 body:not(.audio-on) .screen-keyboard {

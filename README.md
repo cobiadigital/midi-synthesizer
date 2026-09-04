@@ -7,16 +7,19 @@ feature set with a Moog-style ladder filter.
 
 ## Status
 
-Milestone 1 of 5. Current features:
+Milestone 1 of 5, plus the arpeggiator from milestone 5. Current features:
 
 - One anti-aliased oscillator (saw, square, triangle) with shape control
 - ADSR amplitude envelope
 - Mono voice with last-note priority, legato, and glide
+- Arpeggiator with six note orders, a four-octave range, and latch
+- Sample-accurate step clock: tempo, division down to 1/32 and triplets,
+  swing, gate length, and ratcheting
 - Web MIDI input, on-screen keyboard, and computer-keyboard playing
 - Offline-testable DSP core
 
 Coming next: second oscillator and mixer, Moog ladder filter, filter
-envelope, LFO and modulation routing, presets, arpeggiator, effects.
+envelope, LFO and modulation routing, presets, delay and chorus.
 See [CLAUDE.md](./CLAUDE.md) for the roadmap and architecture.
 
 ## Requirements
@@ -45,6 +48,26 @@ start audio without a click, so the button is not optional.
 
 Knobs: drag up and down, hold Shift for fine control, double-click to reset,
 scroll wheel for stepped changes.
+
+## Arpeggiator
+
+Turn **ARP → Arp** on and hold a chord. The lamp beside **Start audio** blinks
+on every step and brightens on each count of four, and the on-screen keys light
+up in blue as the pattern plays them.
+
+| Knob | What it does |
+|---|---|
+| CLOCK → Tempo | 30 to 300 bpm |
+| CLOCK → Rate | Step length, from a whole note down to 1/32, including dotted and triplet divisions |
+| CLOCK → Swing | Delays every second step. 33% is the classic 2:1 triplet shuffle, 0% is straight |
+| CLOCK → Gate | How much of each step sounds. Turn it fully up to tie the steps together, which makes the arpeggio glide instead of retriggering |
+| ARP → Mode | `up`, `down`, `up-down`, `down-up`, `as played`, `random` |
+| ARP → Range | How many octaves the chord is stacked over |
+| ARP → Ratchet | Repeats each step 2, 3, or 4 times inside its own slot |
+| ARP → Latch | Keeps the pattern running after you let go. The next key you press starts a new chord |
+
+Switching the arpeggiator off while keys are down hands those notes straight
+back to the voice, so it is safe to flip mid-phrase.
 
 ## Scripts
 
@@ -125,7 +148,7 @@ npm run deploy:version  # upload a preview version instead
 
 ```
 src/dsp/        Pure TypeScript signal processing, no browser APIs
-src/worklet/    AudioWorkletProcessor that hosts the voice on the audio thread
+src/worklet/    AudioWorkletProcessor that hosts the synth on the audio thread
 src/midi/       Web MIDI and computer keyboard input
 src/ui/         Knob custom element, panel builder, on-screen keyboard
 src/presets/    Patch JSON (empty until milestone 4)

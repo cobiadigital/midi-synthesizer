@@ -1,5 +1,6 @@
 import { AudioEngine } from "./audio-engine";
 import { defaultPatch, type ParamId } from "./dsp/params";
+import type { SynthEvent } from "./dsp/synth";
 import { KeyboardInput } from "./midi/keyboard-input";
 import { MidiInput } from "./midi/midi-input";
 import { ScreenKeyboard } from "./ui/keyboard";
@@ -22,6 +23,7 @@ const startButton = document.getElementById("start") as HTMLButtonElement;
 const status = document.getElementById("status") as HTMLElement;
 const panelRoot = document.getElementById("panel") as HTMLElement;
 const keyboardRoot = document.getElementById("keyboard") as HTMLElement;
+const beatLed = document.getElementById("beat") as HTMLElement;
 
 const panel = new Panel(panelRoot, patch, (id: ParamId, value: number) => {
   patch[id] = value;
@@ -41,6 +43,33 @@ function noteOn(note: number, velocity: number): void {
 function noteOff(note: number): void {
   engine.noteOff(note);
   screenKeyboard.setHeld(note, false);
+}
+
+// The audio thread reports each arpeggiator step, which is the only way the
+// UI can know what is sounding: the pattern is generated below the main thread.
+engine.onEvent = (event: SynthEvent) => {
+  switch (event.type) {
+    case "arpNote":
+      screenKeyboard.setArpNote(event.note, event.on);
+      break;
+    case "arpStep":
+      pulseBeat(event.step);
+      break;
+    case "arpStopped":
+      screenKeyboard.clearArpNotes();
+      beatLed.classList.remove("on", "downbeat");
+      break;
+  }
+};
+
+let beatTimer = 0;
+function pulseBeat(step: number): void {
+  // Every fourth step reads as a downbeat, which gives the eye something to
+  // count against when swing or ratcheting makes the rhythm lopsided.
+  beatLed.classList.toggle("downbeat", step % 4 === 0);
+  beatLed.classList.add("on");
+  clearTimeout(beatTimer);
+  beatTimer = window.setTimeout(() => beatLed.classList.remove("on"), 70);
 }
 
 new KeyboardInput({

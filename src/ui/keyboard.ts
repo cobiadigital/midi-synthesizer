@@ -55,6 +55,20 @@ export class ScreenKeyboard {
     this.keys.get(note)?.classList.toggle("held", held);
   }
 
+  /**
+   * Reflect a note the arpeggiator is playing. Kept separate from `held` so a
+   * key that is physically down still reads as held once the step passes, and
+   * so notes the arpeggiator transposes off the end of the keyboard are simply
+   * ignored.
+   */
+  setArpNote(note: number, on: boolean): void {
+    this.keys.get(note)?.classList.toggle("arp", on);
+  }
+
+  clearArpNotes(): void {
+    for (const key of this.keys.values()) key.classList.remove("arp");
+  }
+
   private noteAt(event: PointerEvent): number | null {
     const el = document.elementFromPoint(event.clientX, event.clientY) as HTMLElement | null;
     const raw = el?.closest<HTMLElement>(".key")?.dataset.note;

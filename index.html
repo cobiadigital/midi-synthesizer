@@ -11,7 +11,10 @@
   <body>
     <header>
       <h1>Mono Synth <small>Subtractive monosynth in the browser</small></h1>
-      <button id="start" type="button">Start audio</button>
+      <div class="transport">
+        <span id="beat" class="beat-led" role="img" aria-label="Arpeggiator step indicator"></span>
+        <button id="start" type="button">Start audio</button>
+      </div>
     </header>
     <p id="status" class="selectable">Click Start audio, then play a MIDI keyboard, the on-screen keys, or A through K.</p>
     <main id="panel"></main>

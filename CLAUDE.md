@@ -22,9 +22,10 @@ Three layers, strictly separated:
    `process()` or per-block `render()` method. No DOM, no Web Audio, no
    imports outside `src/dsp/`. This is what the tests exercise.
 2. **Audio thread** in `src/worklet/synth-processor.ts`. One
-   `AudioWorkletProcessor` that owns a `MonoVoice` and applies messages from
+   `AudioWorkletProcessor` that owns a `Synth` and applies messages from
    the main thread. It is loaded via Vite's `?worker&url` import so its
-   imports get bundled.
+   imports get bundled. It posts `SynthReply` messages back on blocks where
+   the arpeggiator produced events.
 3. **Main thread** in `src/main.ts`, `src/audio-engine.ts`, `src/midi/`,
    `src/ui/`. Talks to the worklet only through `SynthMessage` objects posted
    over the MessagePort. Never touches audio state directly.
@@ -43,6 +44,38 @@ worklet stores values in a `ParamStore` indexed by it, and presets are
 
 Time and frequency params use `taper: "log"` so knobs feel right. Discrete
 params use `step` and `choices`.
+
+### Synth
+
+`Synth` in `src/dsp/synth.ts` is the whole instrument: a `ParamStore`, an
+`Arpeggiator`, and a `MonoVoice`. Note events go into the arpeggiator, never
+into the voice directly. `render()` walks the output buffer in chunks bounded
+by `Arpeggiator.framesToEvent()`, so an arpeggiator step starts on an exact
+sample instead of being rounded to the 128-frame render quantum. There is a
+test asserting that output is identical whether rendered in one call or in
+128-frame blocks; keep it passing when touching the loop.
+
+`takeEvents()` drains the UI events (`arpNote`, `arpStep`, `arpStopped`) the
+worklet posts back to the main thread, which is the only way the UI can know
+what the pattern is playing. Only arpeggiator-generated notes are reported;
+notes the arpeggiator passes through are already on screen.
+
+### Clock and arpeggiator
+
+`StepClock` in `src/dsp/clock.ts` owns tempo, division, swing and ratcheting.
+Timers are fractional and accumulate rather than being reassigned, which is
+what stops a division like 1/8T from drifting flat. Swing lengthens
+even-numbered steps and shortens odd ones by the same fraction, so a pair
+always spans two straight steps; 1/3 gives the 2:1 ratio of triplet swing.
+`DIVISIONS` is ordered slowest first so a knob sweeps long to short.
+
+`Arpeggiator` in `src/dsp/arpeggiator.ts` is a MIDI event transformer ahead of
+the voice. Off, it passes notes through. On, it swallows them, keeps its own
+chord, and plays it back one note at a time. The sequence is rebuilt only when
+the chord or a shaping param changes, never inside the sample loop. A fully
+open gate (1.0) ties steps: the next note is pressed before the last is
+released, so the voice glides instead of restarting. Latch keeps released
+notes in the chord until a key goes down with nothing else held.
 
 ### Voice
 
@@ -111,8 +144,11 @@ Setup steps for the dashboard live in README.md.
    routing.
 4. Preset save and load (JSON in localStorage, factory bank in
    `src/presets/`). MIDI CC learn. PWA service worker for offline use.
-5. Arpeggiator (MIDI event transformer ahead of the voice), delay and chorus
-   on a post-voice effects bus.
+5. Arpeggiator **done**: modes (up, down, up-down, down-up, as played,
+   random), octave range, latch, and a sample-accurate step clock with tempo,
+   division, swing, gate and ratcheting. Still to do: delay and chorus on a
+   post-voice effects bus, and syncing the LFO and delay time to the same
+   clock once they exist.
 
 ## Known browser constraints
 

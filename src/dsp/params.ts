@@ -6,6 +6,9 @@
  * one entry here and reading it in the voice.
  */
 
+import { ARP_MODES } from "./arpeggiator";
+import { DEFAULT_DIVISION, DIVISION_LABELS } from "./clock";
+
 export type ParamId =
   | "osc1Wave"
   | "osc1Octave"
@@ -15,6 +18,15 @@ export type ParamId =
   | "ampSustain"
   | "ampRelease"
   | "glide"
+  | "tempo"
+  | "arpRate"
+  | "arpSwing"
+  | "arpGate"
+  | "arpOn"
+  | "arpMode"
+  | "arpOctaves"
+  | "arpRatchet"
+  | "arpLatch"
   | "masterVolume";
 
 export type ParamTaper = "linear" | "log";
@@ -37,6 +49,8 @@ export interface ParamDef {
 
 export const WAVEFORMS = ["saw", "square", "triangle"] as const;
 
+const OFF_ON = ["off", "on"];
+
 export const PARAMS: readonly ParamDef[] = [
   { id: "osc1Wave", label: "Wave", group: "VCO 1", min: 0, max: 2, default: 0, step: 1, choices: [...WAVEFORMS] },
   { id: "osc1Octave", label: "Octave", group: "VCO 1", min: -2, max: 2, default: 0, step: 1, choices: ["16'", "8'", "4'", "2'", "1'"] },
@@ -46,6 +60,15 @@ export const PARAMS: readonly ParamDef[] = [
   { id: "ampSustain", label: "Sustain", group: "AMP EG", min: 0, max: 1, default: 0.8 },
   { id: "ampRelease", label: "Release", group: "AMP EG", min: 0.001, max: 5, default: 0.25, taper: "log", unit: "s" },
   { id: "glide", label: "Glide", group: "VOICE", min: 0, max: 2, default: 0, taper: "log", unit: "s" },
+  { id: "tempo", label: "Tempo", group: "CLOCK", min: 30, max: 300, default: 120, unit: "bpm" },
+  { id: "arpRate", label: "Rate", group: "CLOCK", min: 0, max: DIVISION_LABELS.length - 1, default: DEFAULT_DIVISION, step: 1, choices: DIVISION_LABELS },
+  { id: "arpSwing", label: "Swing", group: "CLOCK", min: 0, max: 75, default: 0, unit: "%" },
+  { id: "arpGate", label: "Gate", group: "CLOCK", min: 0.05, max: 1, default: 0.5 },
+  { id: "arpOn", label: "Arp", group: "ARP", min: 0, max: 1, default: 0, step: 1, choices: OFF_ON },
+  { id: "arpMode", label: "Mode", group: "ARP", min: 0, max: ARP_MODES.length - 1, default: 0, step: 1, choices: [...ARP_MODES] },
+  { id: "arpOctaves", label: "Range", group: "ARP", min: 1, max: 4, default: 1, step: 1, choices: ["1 oct", "2 oct", "3 oct", "4 oct"] },
+  { id: "arpRatchet", label: "Ratchet", group: "ARP", min: 1, max: 4, default: 1, step: 1, choices: ["x1", "x2", "x3", "x4"] },
+  { id: "arpLatch", label: "Latch", group: "ARP", min: 0, max: 1, default: 0, step: 1, choices: OFF_ON },
   { id: "masterVolume", label: "Volume", group: "MASTER", min: 0, max: 1, default: 0.7 },
 ];
 
