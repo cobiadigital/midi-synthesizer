@@ -86,8 +86,19 @@ aiming at 1.3. Retrigger does not reset level, which keeps legato click-free.
 npm run dev        # dev server
 npm test           # vitest, must pass before committing
 npm run build      # tsc --noEmit then vite build
-npx wrangler deploy
+npm run deploy     # manual wrangler deploy, rarely needed
 ```
+
+## Deployment
+
+Cloudflare Workers Builds is connected to the GitHub repo and owns deploys.
+A merge to `main` runs `npm run build` then `npx wrangler deploy`; any other
+branch runs `npx wrangler versions upload` and gets a preview URL. Node
+version comes from `.node-version`. `.github/workflows/ci.yml` runs typecheck,
+tests, and build on pull requests, because the Cloudflare build only
+typechecks. Do not add a deploy step to GitHub Actions: it would duplicate
+Workers Builds and need an API token this project does not otherwise want.
+Setup steps for the dashboard live in README.md.
 
 ## Roadmap
 
@@ -101,7 +112,7 @@ npx wrangler deploy
 4. Preset save and load (JSON in localStorage, factory bank in
    `src/presets/`). MIDI CC learn. PWA service worker for offline use.
 5. Arpeggiator (MIDI event transformer ahead of the voice), delay and chorus
-   on a post-voice effects bus, first Workers deploy.
+   on a post-voice effects bus.
 
 ## Known browser constraints
 
