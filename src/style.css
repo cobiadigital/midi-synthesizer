@@ -13,14 +13,20 @@
 
 /* This is an instrument, not a document. iOS long-press would otherwise pop
    the Copy / Look Up / Translate callout and highlight the panel labels
-   mid-gesture, and the selection anchor drifts outside whichever container
-   the touch started in, so the lock has to be document-wide rather than
-   scoped to #panel and .screen-keyboard. Anything genuinely worth copying
-   opts back in with .selectable below. */
-html {
+   mid-gesture. Setting this on html alone was not enough: WebKit resolves
+   the long-press selection against the touched element, and UA styles on
+   form controls (the keyboard's buttons) reset the inherited value, so the
+   rule has to hit every element. Anything worth copying opts back in with
+   .selectable, whose class specificity beats the universal selector. */
+*,
+*::before,
+*::after {
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
+}
+
+html {
   -webkit-tap-highlight-color: transparent;
 }
 
