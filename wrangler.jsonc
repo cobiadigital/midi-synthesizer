@@ -1,0 +1,11 @@
+// Cloudflare Workers configuration. The synth is a static PWA: no server-side
+// code runs yet, Workers just serves the Vite build over HTTPS (required by
+// Web MIDI and AudioWorklet).
+{
+  "name": "midi-synthesizer",
+  "compatibility_date": "2026-01-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  }
+}
