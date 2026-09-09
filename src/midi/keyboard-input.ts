@@ -1,7 +1,8 @@
 /**
  * Computer keyboard as a MIDI controller: the classic two-row piano layout
  * (A S D F G H J K for white keys, W E T Y U for black keys), Z and X shift
- * octaves. Fallback for browsers without Web MIDI.
+ * octaves, and the space bar stands in for a sustain pedal. Fallback for
+ * browsers without Web MIDI.
  */
 
 const KEY_TO_SEMITONE: Record<string, number> = {
@@ -11,12 +12,14 @@ const KEY_TO_SEMITONE: Record<string, number> = {
 export interface KeyboardHandlers {
   noteOn(note: number, velocity: number): void;
   noteOff(note: number): void;
+  sustain?(on: boolean): void;
   octaveChanged?(baseNote: number): void;
 }
 
 export class KeyboardInput {
   private baseNote = 60;
   private readonly down = new Map<string, number>();
+  private sustaining = false;
 
   constructor(private readonly handlers: KeyboardHandlers) {}
 
@@ -37,6 +40,17 @@ export class KeyboardInput {
     if (isTextInput(event.target)) return;
     const key = event.key.toLowerCase();
 
+    if (key === " ") {
+      // Space is the pedal. Cancelling the default also stops it scrolling
+      // the page or re-firing whichever button still has focus.
+      event.preventDefault();
+      if (!this.sustaining) {
+        this.sustaining = true;
+        this.handlers.sustain?.(true);
+      }
+      return;
+    }
+
     if (key === "z" || key === "x") {
       this.baseNote = Math.min(96, Math.max(24, this.baseNote + (key === "z" ? -12 : 12)));
       this.handlers.octaveChanged?.(this.baseNote);
@@ -52,6 +66,11 @@ export class KeyboardInput {
 
   private readonly onKeyUp = (event: KeyboardEvent): void => {
     const key = event.key.toLowerCase();
+    if (key === " ") {
+      this.sustaining = false;
+      this.handlers.sustain?.(false);
+      return;
+    }
     const note = this.down.get(key);
     if (note === undefined) return;
     this.down.delete(key);
@@ -61,6 +80,12 @@ export class KeyboardInput {
   private readonly releaseAll = (): void => {
     for (const note of this.down.values()) this.handlers.noteOff(note);
     this.down.clear();
+    // Losing focus with the pedal down would otherwise hold the chord forever:
+    // the keyup never arrives.
+    if (this.sustaining) {
+      this.sustaining = false;
+      this.handlers.sustain?.(false);
+    }
   };
 }
 

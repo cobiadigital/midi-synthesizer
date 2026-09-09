@@ -30,6 +30,9 @@ class SynthProcessor extends AudioWorkletProcessor {
       case "allNotesOff":
         this.synth.allNotesOff();
         break;
+      case "sustain":
+        this.synth.setSustain(msg.on);
+        break;
       case "param":
         this.synth.setParam(msg.id, msg.value);
         break;

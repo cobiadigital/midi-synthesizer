@@ -1,6 +1,6 @@
-# Mono Synth
+# Poly Synth
 
-A monophonic subtractive synthesizer that runs in the browser, plays from a
+An eight-voice subtractive synthesizer that runs in the browser, plays from a
 MIDI keyboard, and is built to be deployed as a static PWA on Cloudflare
 Workers. The design target is a hybrid of the Korg Minilogue's panel and
 feature set with a Moog-style ladder filter.
@@ -11,7 +11,9 @@ Milestone 1 of 5, plus the arpeggiator from milestone 5. Current features:
 
 - One anti-aliased oscillator (saw, square, triangle) with shape control
 - ADSR amplitude envelope
-- Mono voice with last-note priority, legato, and glide
+- Eight-voice polyphony with note stealing, plus a mono mode with last-note
+  priority, legato, and glide
+- Sustain pedal (MIDI CC 64, or the space bar)
 - Arpeggiator with six note orders, a four-octave range, and latch
 - Sample-accurate step clock: tempo, division down to 1/32 and triplets,
   swing, gate length, and ratcheting
@@ -43,11 +45,31 @@ start audio without a click, so the button is not optional.
 | Input | How |
 |---|---|
 | MIDI keyboard | Plug in before or after starting. Devices are listed in the status line. |
-| Computer keyboard | `A S D F G H J K` are white keys, `W E T Y U` black keys. `Z` and `X` shift octave. |
-| On-screen keys | Click or touch. Drag across keys for glissando. Lower on the key is louder. |
+| Computer keyboard | `A S D F G H J K` are white keys, `W E T Y U` black keys. `Z` and `X` shift octave, space is the sustain pedal. |
+| On-screen keys | Click or touch. Several fingers at once play a chord, each can slide across keys for glissando, and lower on the key is louder. |
+| Sustain pedal | A pedal on MIDI CC 64, or hold space. The keyboard outline lights while it is down. |
 
 Knobs: drag up and down, hold Shift for fine control, double-click to reset,
 scroll wheel for stepped changes.
+
+## Voices
+
+| Knob | What it does |
+|---|---|
+| VOICE → Mode | `poly` gives every note its own voice. `mono` plays one note at a time with last-note priority, legato and glide |
+| VOICE → Voices | How many notes can sound at once, 2 to 8. Turn it down mid-chord and the extra notes fade rather than cutting off |
+| VOICE → Glide | Portamento time. Mono only: a poly voice that gets reused jumps to its new pitch instead of swooping |
+
+When the pool is full the next note takes a voice back, choosing the least
+audible one: an idle voice first, then the quietest note still fading out,
+then the oldest note being held.
+
+The pedal holds whatever the keys let go of. With the arpeggiator running it
+holds the chord, like a momentary version of ARP → Latch.
+
+Voices are summed straight, so a big chord at a high master volume can reach
+the output ceiling. MASTER → Volume is the headroom control until the ladder
+filter and its drive stage arrive.
 
 ## Arpeggiator
 

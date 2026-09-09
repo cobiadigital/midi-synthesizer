@@ -6,6 +6,7 @@ export type SynthMessage =
   | { type: "noteOn"; note: number; velocity: number }
   | { type: "noteOff"; note: number }
   | { type: "allNotesOff" }
+  | { type: "sustain"; on: boolean }
   | { type: "param"; id: ParamId; value: number };
 
 /**
