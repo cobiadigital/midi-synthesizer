@@ -16,6 +16,8 @@ document.addEventListener("selectstart", (event) => {
   if (!node?.closest(".selectable")) event.preventDefault();
 });
 
+const SUSTAIN_CC = 64;
+
 const engine = new AudioEngine();
 const patch = defaultPatch();
 
@@ -43,6 +45,13 @@ function noteOn(note: number, velocity: number): void {
 function noteOff(note: number): void {
   engine.noteOff(note);
   screenKeyboard.setHeld(note, false);
+}
+
+// The pedal is handled inside the synth, above the arpeggiator: it sustains
+// notes when playing by hand and holds the chord while the pattern runs.
+function setSustain(on: boolean): void {
+  engine.sustain(on);
+  keyboardRoot.classList.toggle("sustaining", on);
 }
 
 // The audio thread reports each arpeggiator step, which is the only way the
@@ -75,6 +84,7 @@ function pulseBeat(step: number): void {
 new KeyboardInput({
   noteOn,
   noteOff,
+  sustain: setSustain,
   octaveChanged: (base) => setStatus(`Computer keyboard octave: C${base / 12 - 1}`),
 }).attach();
 
@@ -106,6 +116,11 @@ async function connectMidi(): Promise<void> {
   const midi = new MidiInput({
     noteOn,
     noteOff,
+    // CC 64 is the sustain pedal. Anything from 64 up counts as down, which is
+    // what the MIDI spec says and what half-damper pedals send.
+    controlChange: (controller, value) => {
+      if (controller === SUSTAIN_CC) setSustain(value >= 64);
+    },
     devicesChanged: (names) =>
       setStatus(names.length ? `MIDI: ${names.join(", ")}` : "MIDI ready. No devices connected."),
   });

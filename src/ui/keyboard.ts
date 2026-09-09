@@ -1,6 +1,9 @@
 /**
  * On-screen piano keyboard. Two octaves, pointer-driven, with a note-held
  * highlight that other input sources (MIDI, computer keys) can also drive.
+ *
+ * Every pointer is tracked separately, so a chord can be played with several
+ * fingers on a touch screen and each finger can slide across keys on its own.
  */
 
 export interface ScreenKeyboardHandlers {
@@ -13,7 +16,8 @@ const BLACK_KEYS = new Set([1, 3, 6, 8, 10]);
 export class ScreenKeyboard {
   private readonly keys = new Map<number, HTMLElement>();
   private baseNote: number;
-  private activePointerNote: number | null = null;
+  /** Note each active pointer is currently holding, keyed by pointerId. */
+  private readonly pointerNotes = new Map<number, number>();
 
   constructor(
     private readonly container: HTMLElement,
@@ -78,25 +82,29 @@ export class ScreenKeyboard {
   private readonly onPointerDown = (event: PointerEvent): void => {
     const note = this.noteAt(event);
     if (note === null) return;
+    // Capture per pointer, not per element: several fingers can be captured on
+    // the same keyboard at once, and each keeps getting its own moves.
     this.container.setPointerCapture(event.pointerId);
-    this.activePointerNote = note;
+    this.pointerNotes.set(event.pointerId, note);
     this.handlers.noteOn(note, velocityFromY(event, this.keys.get(note)));
   };
 
   private readonly onPointerMove = (event: PointerEvent): void => {
-    if (this.activePointerNote === null) return;
+    const held = this.pointerNotes.get(event.pointerId);
+    if (held === undefined) return;
     const note = this.noteAt(event);
-    if (note === null || note === this.activePointerNote) return;
+    if (note === null || note === held) return;
     // Glissando: sliding across keys plays them legato.
     this.handlers.noteOn(note, 100);
-    this.handlers.noteOff(this.activePointerNote);
-    this.activePointerNote = note;
+    this.handlers.noteOff(held);
+    this.pointerNotes.set(event.pointerId, note);
   };
 
-  private readonly onPointerUp = (): void => {
-    if (this.activePointerNote === null) return;
-    this.handlers.noteOff(this.activePointerNote);
-    this.activePointerNote = null;
+  private readonly onPointerUp = (event: PointerEvent): void => {
+    const held = this.pointerNotes.get(event.pointerId);
+    if (held === undefined) return;
+    this.pointerNotes.delete(event.pointerId);
+    this.handlers.noteOff(held);
   };
 
   get lowestNote(): number {

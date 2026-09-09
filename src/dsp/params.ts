@@ -17,6 +17,8 @@ export type ParamId =
   | "ampDecay"
   | "ampSustain"
   | "ampRelease"
+  | "voiceMode"
+  | "polyVoices"
   | "glide"
   | "tempo"
   | "arpRate"
@@ -49,6 +51,12 @@ export interface ParamDef {
 
 export const WAVEFORMS = ["saw", "square", "triangle"] as const;
 
+/**
+ * Mono keeps the note stack, legato and glide of a single voice. Poly hands
+ * each note its own voice from the pool, which is what `polyVoices` sizes.
+ */
+export const VOICE_MODES = ["mono", "poly"] as const;
+
 const OFF_ON = ["off", "on"];
 
 export const PARAMS: readonly ParamDef[] = [
@@ -59,6 +67,8 @@ export const PARAMS: readonly ParamDef[] = [
   { id: "ampDecay", label: "Decay", group: "AMP EG", min: 0.001, max: 5, default: 0.3, taper: "log", unit: "s" },
   { id: "ampSustain", label: "Sustain", group: "AMP EG", min: 0, max: 1, default: 0.8 },
   { id: "ampRelease", label: "Release", group: "AMP EG", min: 0.001, max: 5, default: 0.25, taper: "log", unit: "s" },
+  { id: "voiceMode", label: "Mode", group: "VOICE", min: 0, max: 1, default: 1, step: 1, choices: [...VOICE_MODES] },
+  { id: "polyVoices", label: "Voices", group: "VOICE", min: 2, max: 8, default: 8, step: 1 },
   { id: "glide", label: "Glide", group: "VOICE", min: 0, max: 2, default: 0, taper: "log", unit: "s" },
   { id: "tempo", label: "Tempo", group: "CLOCK", min: 30, max: 300, default: 120, unit: "bpm" },
   { id: "arpRate", label: "Rate", group: "CLOCK", min: 0, max: DIVISION_LABELS.length - 1, default: DEFAULT_DIVISION, step: 1, choices: DIVISION_LABELS },

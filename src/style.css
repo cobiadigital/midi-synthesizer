@@ -169,6 +169,12 @@ body.dragging { cursor: ns-resize; }
   touch-action: none;
 }
 
+/* Pedal down. The keys stay lit after the fingers leave, so an outline on the
+   whole keyboard is the honest place to show it. */
+.screen-keyboard.sustaining {
+  box-shadow: inset 0 0 0 2px var(--knob-arc, #f5a623);
+}
+
 .key {
   border: 0;
   padding: 0;

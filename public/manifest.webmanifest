@@ -1,7 +1,7 @@
 {
-  "name": "Mono Synth",
-  "short_name": "MonoSynth",
-  "description": "Browser-based monophonic subtractive synthesizer with MIDI input",
+  "name": "Poly Synth",
+  "short_name": "PolySynth",
+  "description": "Browser-based polyphonic subtractive synthesizer with MIDI input",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#141414",

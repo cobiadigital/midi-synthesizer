@@ -6,13 +6,14 @@ Human-facing setup and usage live in README.md.
 
 ## What this is
 
-A browser-based monophonic subtractive synthesizer with MIDI input, written
-in TypeScript, deployed as a static PWA on Cloudflare Workers. The sonic
-target is a hybrid: Korg Minilogue panel and features (two VCOs with wave,
-shape, octave, pitch, sync, ring mod, cross mod, mixer with noise, two
-envelopes, LFO with targets) feeding a Moog four-pole ladder filter with
-drive. Mono only for now. Polyphony and a Logic Pro Audio Unit are explicitly
-out of scope until the mono engine sounds right.
+A browser-based subtractive synthesizer with MIDI input, written in
+TypeScript, deployed as a static PWA on Cloudflare Workers. The sonic target
+is a hybrid: Korg Minilogue panel and features (two VCOs with wave, shape,
+octave, pitch, sync, ring mod, cross mod, mixer with noise, two envelopes,
+LFO with targets) feeding a Moog four-pole ladder filter with drive.
+
+It plays eight-voice polyphonic by default, with a mono mode that keeps the
+note stack, legato and glide. A Logic Pro Audio Unit is still out of scope.
 
 ## Architecture
 
@@ -38,8 +39,10 @@ worklet stores values in a `ParamStore` indexed by it, and presets are
 `Record<ParamId, number>`. To add a control:
 
 1. Add the `ParamId` to the union and a `ParamDef` to `PARAMS`.
-2. Read it in `MonoVoice.render()` (per-block params) or handle it in
-   `MonoVoice.applyParam()` (params that configure a sub-module).
+2. Read it in `Voice.add()` (per-block params) or handle it in
+   `Voice.applyParam()` (params that configure a sub-module). A param that
+   changes how notes are allocated rather than how one sounds belongs in
+   `PolyVoices.applyParam()` or `Synth.setParam()` instead.
 3. Add a test if it changes the sound in a measurable way.
 
 Time and frequency params use `taper: "log"` so knobs feel right. Discrete
@@ -47,9 +50,20 @@ params use `step` and `choices`.
 
 ### Synth
 
-`Synth` in `src/dsp/synth.ts` is the whole instrument: a `ParamStore`, an
-`Arpeggiator`, and a `MonoVoice`. Note events go into the arpeggiator, never
-into the voice directly. `render()` walks the output buffer in chunks bounded
+`Synth` in `src/dsp/synth.ts` is the whole instrument: a `ParamStore`, a
+sustain gate, an `Arpeggiator`, and both voice engines. Note events go into
+the sustain gate, then the arpeggiator, never into a voice directly.
+
+The sustain pedal deliberately sits *above* the arpeggiator: `noteOff` while
+the pedal is down is remembered instead of being forwarded, and the pedal
+coming up forwards the lot. That one placement gives a real pedal when playing
+by hand and a momentary latch while the arpeggiator runs, in both voice modes,
+without a line of pedal code in any voice.
+
+Both engines exist at all times and both are mixed in `render()`, so switching
+`voiceMode` releases what the outgoing engine held and lets its tail ring out
+instead of cutting it dead. `engine` is read at call time by the arpeggiator's
+sink, which is how the switch reaches a running pattern. `render()` walks the output buffer in chunks bounded
 by `Arpeggiator.framesToEvent()`, so an arpeggiator step starts on an exact
 sample instead of being rounded to the 128-frame render quantum. There is a
 test asserting that output is identical whether rendered in one call or in
@@ -77,12 +91,32 @@ open gate (1.0) ties steps: the next note is pressed before the last is
 released, so the voice glides instead of restarting. Latch keeps released
 notes in the chord until a key goes down with nothing else held.
 
-### Voice
+### Voices
 
-`MonoVoice` holds a note stack for last-note priority. Releasing the newest
-key while an older key is held slides back to the older note without
-retriggering the envelope (legato). Glide is a one-pole smoother on the MIDI
-note number, applied per sample. Velocity scales gain between 30% and 100%.
+`Voice` in `src/dsp/voice.ts` is one sounding note: oscillator, amp envelope,
+glide smoother, velocity gain. Glide is a one-pole smoother on the MIDI note
+number, applied per sample. Velocity scales gain between 30% and 100%. `add()`
+mixes into the buffer rather than replacing it, so engines can be summed; an
+idle voice returns early and snaps its gain smoother to target, which keeps
+output identical no matter how the render is chunked.
+
+`MonoVoice` drives one `Voice` from a note stack with last-note priority.
+Releasing the newest key while an older key is held slides back to the older
+note without retriggering the envelope (legato).
+
+`PolyVoices` in `src/dsp/poly-voices.ts` owns a fixed pool of `MAX_VOICES`
+(from the `polyVoices` param's max), built up front so allocation on the audio
+thread is a search, never a `new`. Stealing order is: the voice already
+assigned that note, then the oldest idle voice, then the quietest releasing
+voice, then the oldest held one. Voices above the current `polyVoices` limit
+are released but still rendered, so turning the knob down fades the extra
+notes instead of stranding them. Poly voices never glide: a stolen voice
+sliding up from its old note is a swoop nobody asked for.
+
+Voices are summed straight, the way a polysynth's voice cards sum into its
+mixer. A big chord at a high master volume can therefore reach the output
+ceiling; the Volume knob is the headroom control until a filter drive or an
+output stage exists.
 
 ### Oscillator
 
@@ -144,7 +178,9 @@ Setup steps for the dashboard live in README.md.
    routing.
 4. Preset save and load (JSON in localStorage, factory bank in
    `src/presets/`). MIDI CC learn. PWA service worker for offline use.
-5. Arpeggiator **done**: modes (up, down, up-down, down-up, as played,
+5. Polyphony **done**: eight-voice pool with note stealing, a mono/poly
+   switch, sustain pedal on CC 64, and a multi-touch on-screen keyboard.
+   Arpeggiator **done**: modes (up, down, up-down, down-up, as played,
    random), octave range, latch, and a sample-accurate step clock with tempo,
    division, swing, gate and ratcheting. Still to do: delay and chorus on a
    post-voice effects bus, and syncing the LFO and delay time to the same

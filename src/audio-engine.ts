@@ -52,6 +52,10 @@ export class AudioEngine {
     this.send({ type: "allNotesOff" });
   }
 
+  sustain(on: boolean): void {
+    this.send({ type: "sustain", on });
+  }
+
   setParam(id: ParamId, value: number): void {
     this.send({ type: "param", id, value });
   }
