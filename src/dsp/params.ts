@@ -17,6 +17,16 @@ export type ParamId =
   | "ampDecay"
   | "ampSustain"
   | "ampRelease"
+  | "filterCutoff"
+  | "filterResonance"
+  | "filterDrive"
+  | "filterKeyTrack"
+  | "filterEnvAmount"
+  | "hpfCutoff"
+  | "filterAttack"
+  | "filterDecay"
+  | "filterSustain"
+  | "filterRelease"
   | "voiceMode"
   | "polyVoices"
   | "glide"
@@ -29,6 +39,14 @@ export type ParamId =
   | "arpOctaves"
   | "arpRatchet"
   | "arpLatch"
+  | "delayTime"
+  | "delaySync"
+  | "delayDivision"
+  | "delayFeedback"
+  | "delayMix"
+  | "reverbSize"
+  | "reverbDamp"
+  | "reverbMix"
   | "masterVolume";
 
 export type ParamTaper = "linear" | "log";
@@ -67,6 +85,16 @@ export const PARAMS: readonly ParamDef[] = [
   { id: "ampDecay", label: "Decay", group: "AMP EG", min: 0.001, max: 5, default: 0.3, taper: "log", unit: "s" },
   { id: "ampSustain", label: "Sustain", group: "AMP EG", min: 0, max: 1, default: 0.8 },
   { id: "ampRelease", label: "Release", group: "AMP EG", min: 0.001, max: 5, default: 0.25, taper: "log", unit: "s" },
+  { id: "filterCutoff", label: "Cutoff", group: "VCF", min: 20, max: 18000, default: 18000, taper: "log", unit: "Hz" },
+  { id: "filterResonance", label: "Reso", group: "VCF", min: 0, max: 1, default: 0 },
+  { id: "filterDrive", label: "Drive", group: "VCF", min: 1, max: 8, default: 1 },
+  { id: "filterKeyTrack", label: "Key", group: "VCF", min: 0, max: 1, default: 0 },
+  { id: "filterEnvAmount", label: "EG Int", group: "VCF", min: -1, max: 1, default: 0 },
+  { id: "hpfCutoff", label: "HP Cut", group: "VCF", min: 20, max: 2000, default: 20, taper: "log", unit: "Hz" },
+  { id: "filterAttack", label: "Attack", group: "VCF EG", min: 0.001, max: 5, default: 0.005, taper: "log", unit: "s" },
+  { id: "filterDecay", label: "Decay", group: "VCF EG", min: 0.001, max: 5, default: 0.5, taper: "log", unit: "s" },
+  { id: "filterSustain", label: "Sustain", group: "VCF EG", min: 0, max: 1, default: 0.4 },
+  { id: "filterRelease", label: "Release", group: "VCF EG", min: 0.001, max: 5, default: 0.3, taper: "log", unit: "s" },
   { id: "voiceMode", label: "Mode", group: "VOICE", min: 0, max: 1, default: 1, step: 1, choices: [...VOICE_MODES] },
   { id: "polyVoices", label: "Voices", group: "VOICE", min: 2, max: 8, default: 8, step: 1 },
   { id: "glide", label: "Glide", group: "VOICE", min: 0, max: 2, default: 0, taper: "log", unit: "s" },
@@ -79,6 +107,14 @@ export const PARAMS: readonly ParamDef[] = [
   { id: "arpOctaves", label: "Range", group: "ARP", min: 1, max: 4, default: 1, step: 1, choices: ["1 oct", "2 oct", "3 oct", "4 oct"] },
   { id: "arpRatchet", label: "Ratchet", group: "ARP", min: 1, max: 4, default: 1, step: 1, choices: ["x1", "x2", "x3", "x4"] },
   { id: "arpLatch", label: "Latch", group: "ARP", min: 0, max: 1, default: 0, step: 1, choices: OFF_ON },
+  { id: "delayTime", label: "Time", group: "DELAY", min: 0.02, max: 2, default: 0.35, taper: "log", unit: "s" },
+  { id: "delaySync", label: "Sync", group: "DELAY", min: 0, max: 1, default: 0, step: 1, choices: OFF_ON },
+  { id: "delayDivision", label: "Div", group: "DELAY", min: 0, max: DIVISION_LABELS.length - 1, default: DEFAULT_DIVISION, step: 1, choices: DIVISION_LABELS },
+  { id: "delayFeedback", label: "Feedback", group: "DELAY", min: 0, max: 0.95, default: 0.35 },
+  { id: "delayMix", label: "Mix", group: "DELAY", min: 0, max: 1, default: 0 },
+  { id: "reverbSize", label: "Size", group: "REVERB", min: 0, max: 1, default: 0.6 },
+  { id: "reverbDamp", label: "Damp", group: "REVERB", min: 0, max: 1, default: 0.4 },
+  { id: "reverbMix", label: "Mix", group: "REVERB", min: 0, max: 1, default: 0 },
   { id: "masterVolume", label: "Volume", group: "MASTER", min: 0, max: 1, default: 0.7 },
 ];
 

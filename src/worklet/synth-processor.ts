@@ -6,8 +6,9 @@ import { Synth } from "../dsp/synth";
  * Hosts the synth on the audio rendering thread.
  *
  * All communication is via MessagePort: the main thread never touches audio
- * state directly. Output is mono duplicated to every output channel, and
- * arpeggiator activity is posted back so the UI can follow along.
+ * state directly. The synth renders a stereo pair; any channel beyond the
+ * second gets a copy of the left. Arpeggiator activity is posted back so the
+ * UI can follow along.
  */
 class SynthProcessor extends AudioWorkletProcessor {
   private readonly synth = new Synth(sampleRate);
@@ -44,8 +45,9 @@ class SynthProcessor extends AudioWorkletProcessor {
     const first = output?.[0];
     if (!output || !first) return true;
 
-    this.synth.render(first);
-    for (let ch = 1; ch < output.length; ch++) {
+    // With only one channel to write, render() folds the bus back to mono.
+    this.synth.render(first, output[1]);
+    for (let ch = 2; ch < output.length; ch++) {
       output[ch]?.set(first);
     }
 

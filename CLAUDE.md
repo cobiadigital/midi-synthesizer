@@ -13,7 +13,10 @@ octave, pitch, sync, ring mod, cross mod, mixer with noise, two envelopes,
 LFO with targets) feeding a Moog four-pole ladder filter with drive.
 
 It plays eight-voice polyphonic by default, with a mono mode that keeps the
-note stack, legato and glide. A Logic Pro Audio Unit is still out of scope.
+note stack, legato and glide. Each voice runs its own ladder filter and filter
+envelope; the voices sum to mono and a stereo effects bus (high-pass, ping-pong
+delay, reverb) is what makes the output stereo. A Logic Pro Audio Unit is still
+out of scope.
 
 ## Architecture
 
@@ -42,7 +45,8 @@ worklet stores values in a `ParamStore` indexed by it, and presets are
 2. Read it in `Voice.add()` (per-block params) or handle it in
    `Voice.applyParam()` (params that configure a sub-module). A param that
    changes how notes are allocated rather than how one sounds belongs in
-   `PolyVoices.applyParam()` or `Synth.setParam()` instead.
+   `PolyVoices.applyParam()` or `Synth.setParam()`; one that belongs after the
+   voices goes in `Bus.applyParam()` or is read per block in `Bus.process()`.
 3. Add a test if it changes the sound in a measurable way.
 
 Time and frequency params use `taper: "log"` so knobs feel right. Discrete
@@ -91,10 +95,54 @@ open gate (1.0) ties steps: the next note is pressed before the last is
 released, so the voice glides instead of restarting. Latch keeps released
 notes in the chord until a key goes down with nothing else held.
 
+### Filter and effects
+
+`LadderFilter` in `src/dsp/filter.ts` is the per-voice VCF: four one-pole
+sections in series, fed back from the last into the first. Each pole turns the
+phase 45 degrees at its own cutoff, so all four together hit 180 degrees there
+and that is the frequency the loop rings at, which is why cutoff is marked at
+the resonant peak and reads 12 dB down with resonance off. Loop gain reaches
+unity near a feedback of 4; the knob goes to 4.4, so the top of the resonance
+range self-oscillates.
+
+Two details are load-bearing, and both were wrong at first:
+
+- The saturator goes **in the loop, once**, not on every pole. A tanh on each
+  pole's own state drives that state to `atanh` of its input, which runs away
+  at full scale and swamps the resonance entirely.
+- The feedback tap is a **two-point average of successive outputs**, a real
+  half-sample delay. Written as a one-pole on its own state it becomes a
+  lowpass in the feedback path, and the resonance never builds.
+
+Everything runs at 2x. Cutoff modulation (key tracking and the filter
+envelope) updates every `CONTROL_INTERVAL` samples from a counter that lives on
+the voice, not the loop, so changing the host block size cannot move the update
+points.
+
+`Highpass` in the same file is a plain two-pole for the master bus, bypassed
+entirely at its minimum so the default patch passes through untouched.
+
+`Bus` in `src/dsp/bus.ts` is high-pass, then `PingPongDelay`, then `Reverb`.
+Both effects are sends added to the dry signal, not crossfades, so the dry
+level never moves and a mix of zero is the dry signal bit for bit. An effect at
+zero mix is skipped and reset when it comes back, so nothing switched off
+spends CPU or returns holding what it heard before. Delay time can follow the
+step clock: same arithmetic as `StepClock`, so a synced delay lands on the
+arpeggiator's steps.
+
+`Reverb` in `src/dsp/reverb.ts` is Freeverb (eight damped combs into four
+allpasses per channel, right side offset to decorrelate). Its wet gain is
+divided by the comb bank's energy gain, `sqrt(1 - feedback^2)`, so the mix knob
+means the same thing at every room size and the largest hall cannot pile up on
+the output. Maximum comb feedback is held at 0.95 rather than Freeverb's 0.98:
+a comb's gain for anything it is in tune with is `1/(1 - feedback)`, and there
+is no limiter downstream.
+
 ### Voices
 
-`Voice` in `src/dsp/voice.ts` is one sounding note: oscillator, amp envelope,
-glide smoother, velocity gain. Glide is a one-pole smoother on the MIDI note
+`Voice` in `src/dsp/voice.ts` is one sounding note, wired oscillator into
+ladder filter into amp envelope: the order every subtractive synth uses. It
+also owns the filter envelope, a glide smoother and a velocity gain. Glide is a one-pole smoother on the MIDI note
 number, applied per sample. Velocity scales gain between 30% and 100%. `add()`
 mixes into the buffer rather than replacing it, so engines can be summed; an
 idle voice returns early and snaps its gain smoother to target, which keeps
@@ -115,8 +163,13 @@ sliding up from its old note is a swoop nobody asked for.
 
 Voices are summed straight, the way a polysynth's voice cards sum into its
 mixer. A big chord at a high master volume can therefore reach the output
-ceiling; the Volume knob is the headroom control until a filter drive or an
-output stage exists.
+ceiling; the Volume knob is the headroom control, and filter drive and the
+effect mixes add to what it has to hold back.
+
+Worst case measured offline (eight voices sounding, cutoff modulated, delay and
+reverb and high-pass all on) is about 11% of one x86 core per second of audio,
+so a phone has room but not a lot of it. Idle voices cost a branch. If that
+budget gets tight, the per-sample work in `Voice.add()` is where to look first.
 
 ### Oscillator
 
@@ -170,9 +223,10 @@ Setup steps for the dashboard live in README.md.
 ## Roadmap
 
 1. **Done.** Scaffold, one oscillator, amp envelope, MIDI in, keyboard UI.
-2. Second VCO with pitch and detune, sub oscillator, noise, mixer. Moog
-   ladder filter (Huovilainen model, oversampled 2x) with cutoff, resonance,
-   drive, key tracking, and envelope amount. Filter envelope.
+2. **Filter done**: four-pole ladder low-pass, oversampled 2x, with cutoff,
+   resonance, drive, key tracking and envelope amount, a dedicated filter
+   envelope, and a two-pole high-pass on the master. Still to do: second VCO
+   with pitch and detune, sub oscillator, noise, mixer.
 3. LFO with rate, wave, and target (pitch, shape, cutoff). Oscillator sync,
    ring mod, cross mod. Saw shape and triangle fold. Mod wheel and velocity
    routing.
@@ -182,9 +236,10 @@ Setup steps for the dashboard live in README.md.
    switch, sustain pedal on CC 64, and a multi-touch on-screen keyboard.
    Arpeggiator **done**: modes (up, down, up-down, down-up, as played,
    random), octave range, latch, and a sample-accurate step clock with tempo,
-   division, swing, gate and ratcheting. Still to do: delay and chorus on a
-   post-voice effects bus, and syncing the LFO and delay time to the same
-   clock once they exist.
+   division, swing, gate and ratcheting. Effects bus **done**: stereo
+   ping-pong delay, tempo-syncable to the same clock, and a Freeverb-style
+   reverb. Still to do: chorus, and syncing the LFO to the clock once it
+   exists.
 
 ## Known browser constraints
 
