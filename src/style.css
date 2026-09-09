@@ -154,7 +154,9 @@ body.dragging { cursor: ns-resize; }
   font-weight: 600;
 }
 
-.knob-row { display: flex; gap: 4px; }
+/* Wraps so a wide group (the six VCF knobs) folds onto a second line on a
+   phone instead of pushing the panel sideways. */
+.knob-row { display: flex; flex-wrap: wrap; gap: 4px; }
 
 .screen-keyboard {
   width: 100%;

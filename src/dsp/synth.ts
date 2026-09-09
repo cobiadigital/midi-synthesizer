@@ -1,4 +1,5 @@
 import { Arpeggiator, type NoteSink } from "./arpeggiator";
+import { Bus } from "./bus";
 import { ParamStore, type ParamId } from "./params";
 import { PolyVoices } from "./poly-voices";
 import { MonoVoice, type VoiceEngine } from "./voice";
@@ -11,7 +12,7 @@ export type SynthEvent =
 
 /**
  * The whole instrument: a sustain gate and an arpeggiator feeding either the
- * mono voice or the poly pool.
+ * mono voice or the poly pool, and a stereo effects bus after them.
  *
  * Note events run through the sustain gate first, then the arpeggiator, which
  * either passes them through or swallows them and plays its own pattern. Both
@@ -20,7 +21,9 @@ export type SynthEvent =
  *
  * `render()` walks the output buffer in chunks bounded by the next scheduled
  * arpeggiator event, so steps start on an exact sample instead of being
- * rounded to the 128-frame render quantum.
+ * rounded to the 128-frame render quantum. The voices sum to mono in the left
+ * channel; the bus runs once over the finished block and is what makes the
+ * signal stereo.
  *
  * No Web Audio here either: the whole thing renders offline in tests.
  */
@@ -30,6 +33,7 @@ export class Synth {
   private readonly poly: PolyVoices;
   private engine: VoiceEngine;
   private readonly arp: Arpeggiator;
+  private readonly bus: Bus;
   private readonly events: SynthEvent[] = [];
 
   private sustaining = false;
@@ -57,6 +61,7 @@ export class Synth {
         this.poly.allNotesOff();
       },
     };
+    this.bus = new Bus(sampleRate, this.params);
     this.arp = new Arpeggiator(sampleRate, this.params, sink);
     this.arp.onStep = (step) => this.events.push({ type: "arpStep", step });
     this.arp.onStop = () => this.events.push({ type: "arpStopped" });
@@ -101,6 +106,7 @@ export class Synth {
     this.mono.applyParam(id);
     this.poly.applyParam(id);
     this.arp.applyParam(id);
+    this.bus.applyParam(id);
     if (id === "voiceMode") this.applyVoiceMode();
   }
 
@@ -127,15 +133,20 @@ export class Synth {
     return this.events.splice(0, this.events.length);
   }
 
-  render(out: Float32Array): void {
+  /**
+   * Render one block. The voices go into `left`; the bus then turns that into
+   * a stereo pair. Called with one channel it renders in mono, which is what
+   * the offline tests do.
+   */
+  render(left: Float32Array, right?: Float32Array): void {
     let offset = 0;
-    while (offset < out.length) {
+    while (offset < left.length) {
       this.arp.fire();
-      const remaining = out.length - offset;
+      const remaining = left.length - offset;
       // fire() leaves every timer at least a frame away, so this always makes
       // progress and the loop cannot spin.
       const frames = Math.max(1, Math.min(remaining, Math.floor(this.arp.framesToEvent())));
-      const chunk = out.subarray(offset, offset + frames);
+      const chunk = left.subarray(offset, offset + frames);
       // The worklet hands back the same buffer every block, so clear before
       // the engines mix into it.
       chunk.fill(0);
@@ -144,6 +155,7 @@ export class Synth {
       this.arp.advance(frames);
       offset += frames;
     }
+    this.bus.process(left, right ?? null);
   }
 
   private selectedEngine(): VoiceEngine {

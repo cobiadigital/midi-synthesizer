@@ -13,6 +13,10 @@ Milestone 1 of 5, plus the arpeggiator from milestone 5. Current features:
 - ADSR amplitude envelope
 - Eight-voice polyphony with note stealing, plus a mono mode with last-note
   priority, legato, and glide
+- Four-pole ladder low-pass per voice: cutoff, resonance to self-oscillation,
+  drive, key tracking, envelope amount, and its own filter envelope
+- Two-pole high-pass on the master
+- Stereo effects bus: ping-pong delay with tempo sync, and reverb
 - Sustain pedal (MIDI CC 64, or the space bar)
 - Arpeggiator with six note orders, a four-octave range, and latch
 - Sample-accurate step clock: tempo, division down to 1/32 and triplets,
@@ -20,8 +24,8 @@ Milestone 1 of 5, plus the arpeggiator from milestone 5. Current features:
 - Web MIDI input, on-screen keyboard, and computer-keyboard playing
 - Offline-testable DSP core
 
-Coming next: second oscillator and mixer, Moog ladder filter, filter
-envelope, LFO and modulation routing, presets, delay and chorus.
+Coming next: second oscillator and mixer, LFO and modulation routing, presets,
+chorus.
 See [CLAUDE.md](./CLAUDE.md) for the roadmap and architecture.
 
 ## Requirements
@@ -51,6 +55,41 @@ start audio without a click, so the button is not optional.
 
 Knobs: drag up and down, hold Shift for fine control, double-click to reset,
 scroll wheel for stepped changes.
+
+## Filter
+
+The filter is a four-pole ladder, one per voice, in the classic place: after
+the oscillator and before the amplifier.
+
+| Knob | What it does |
+|---|---|
+| VCF → Cutoff | Where the filter starts working, marked at the resonant peak the way ladder filters are. With resonance down, that point is already 12 dB along the slope |
+| VCF → Reso | Emphasis at the cutoff. The top of the knob self-oscillates, so the filter sings on its own with no note playing |
+| VCF → Drive | Pushes the filter's saturator. Small signals stay at the same level; loud ones compress and grow harmonics |
+| VCF → Key | How much the cutoff follows the keyboard, so high notes stay as bright as low ones. Fully up tracks the pitch exactly |
+| VCF → EG Int | How far the filter envelope moves the cutoff, up to six octaves either way. Negative closes the filter as the envelope opens |
+| VCF → HP Cut | Two-pole high-pass on the whole instrument. Fully down it is out of the circuit |
+| VCF EG | A second ADSR wired only to the cutoff. Short decay with EG Int up is the classic plucked bass |
+
+## Effects
+
+Voices sum to mono and the effects are where the sound becomes stereo, so both
+are worth hearing on headphones.
+
+| Knob | What it does |
+|---|---|
+| DELAY → Time | 20 ms to 2 s. Turning it while repeats are ringing glides their pitch, like a tape delay |
+| DELAY → Sync | Take the time from the tempo instead of the Time knob |
+| DELAY → Div | Which division to sync to, from a whole note to 1/32, dotted and triplet included. Set to the same division as CLOCK → Rate and the delay lands on the arpeggiator's steps |
+| DELAY → Feedback | How many repeats. Each crossing loses a little top end, so they darken as they go |
+| DELAY → Mix | How much delay to add. At zero the delay is out of the circuit entirely |
+| REVERB → Size | Small bright room through to a long hall. The level stays put as you turn it |
+| REVERB → Damp | How fast the tail loses its high end. Up is a soft room, down is tiled |
+| REVERB → Mix | How much reverb to add. At zero the reverb is out of the circuit entirely |
+
+Repeats alternate between the channels: first left, then right, then back
+again. Both mixes add to the dry signal rather than fading it away, so turning
+them up adds level: a large room at a high mix wants MASTER → Volume down.
 
 ## Voices
 
