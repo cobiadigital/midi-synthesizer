@@ -52,6 +52,11 @@ worklet stores values in a `ParamStore` indexed by it, and presets are
 Time and frequency params use `taper: "log"` so knobs feel right. Discrete
 params use `step` and `choices`.
 
+`paramToNorm`, `paramFromNorm` and `snapParam` in the same file are the taper
+maths, and both the knob element and MIDI CC mapping go through them. A
+controller's travel therefore matches what the knob does under a finger,
+including the log tapers, and there is one place to change if a taper changes.
+
 ### Synth
 
 `Synth` in `src/dsp/synth.ts` is the whole instrument: a `ParamStore`, a
@@ -77,6 +82,27 @@ test asserting that output is identical whether rendered in one call or in
 worklet posts back to the main thread, which is the only way the UI can know
 what the pattern is playing. Only arpeggiator-generated notes are reported;
 notes the arpeggiator passes through are already on screen.
+
+### MIDI control
+
+`CcMap` in `src/midi/cc-map.ts` maps control changes onto params. No DOM and no
+Web MIDI in it: a lookup table with a state machine, so it tests offline.
+
+Bindings are exclusive both ways, one dial to one param, so learning replaces
+rather than stacking assignments that fight each other. CC 64 is the sustain
+pedal, handled before the map is consulted and not learnable.
+
+Takeover is soft. A pot has a position and the patch has a value, and on
+connecting they disagree; a binding stays disengaged until the pot reaches or
+crosses the value on screen, then tracks directly until something else moves
+that param. `handle()` returns `waiting` with the pot position for a knob that
+has not been picked up yet, which is what draws the marker on the knob's rim.
+Anything that moves a param by another route (a knob dragged, a preset loaded)
+must call `release()`, or the next twitch of a dial yanks the value back.
+
+The map lives in `localStorage` under `midi-cc-map`, and `fromJSON` drops
+bindings whose param this build no longer has, so a renamed control costs one
+assignment rather than the whole map.
 
 ### Clock and arpeggiator
 
@@ -230,8 +256,10 @@ Setup steps for the dashboard live in README.md.
 3. LFO with rate, wave, and target (pitch, shape, cutoff). Oscillator sync,
    ring mod, cross mod. Saw shape and triangle fold. Mod wheel and velocity
    routing.
-4. Preset save and load (JSON in localStorage, factory bank in
-   `src/presets/`). MIDI CC learn. PWA service worker for offline use.
+4. **MIDI CC learn done**: eight dials mapped out of the box (CC 21 to 28, as
+   a Launchkey Mini sends), soft takeover, and learn from the panel, saved to
+   localStorage. Still to do: preset save and load (JSON in localStorage,
+   factory bank in `src/presets/`), PWA service worker for offline use.
 5. Polyphony **done**: eight-voice pool with note stealing, a mono/poly
    switch, sustain pedal on CC 64, and a multi-touch on-screen keyboard.
    Arpeggiator **done**: modes (up, down, up-down, down-up, as played,

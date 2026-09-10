@@ -123,6 +123,29 @@ h1 small {
   margin-bottom: 16px;
 }
 
+/* Outlined rather than filled, so it reads as secondary to Start audio. It is
+   a mode, so it holds a lit state while learning. */
+#learn {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--panel-edge);
+  border-radius: 4px;
+  padding: 9px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+#learn:disabled { opacity: 0.4; cursor: default; }
+
+#learn.active {
+  background: var(--knob-pot, #6ba4ff);
+  border-color: var(--knob-pot, #6ba4ff);
+  color: #10202c;
+}
+
 /* Held for the duration of a knob drag: the ns-resize cursor follows the
    pointer anywhere on the page, not just over the knob. */
 body.dragging { cursor: ns-resize; }

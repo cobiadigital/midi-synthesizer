@@ -18,6 +18,7 @@ Milestone 1 of 5, plus the arpeggiator from milestone 5. Current features:
 - Two-pole high-pass on the master
 - Stereo effects bus: ping-pong delay with tempo sync, and reverb
 - Sustain pedal (MIDI CC 64, or the space bar)
+- MIDI CC control of every knob, with soft takeover and on-panel learn
 - Arpeggiator with six note orders, a four-octave range, and latch
 - Sample-accurate step clock: tempo, division down to 1/32 and triplets,
   swing, gate length, and ratcheting
@@ -109,6 +110,34 @@ holds the chord, like a momentary version of ARP → Latch.
 Voices are summed straight, so a big chord at a high master volume can reach
 the output ceiling. MASTER → Volume is the headroom control until the ladder
 filter and its drive stage arrive.
+
+## MIDI control
+
+Eight knobs are mapped for a controller's top row out of the box, on the CC
+numbers a Launchkey Mini sends:
+
+| CC | Knob |
+|---|---|
+| 21 | VCF → Cutoff |
+| 22 | VCF → Reso |
+| 23 | VCF → EG Int |
+| 24 | VCF → Drive |
+| 25 | AMP EG → Attack |
+| 26 | AMP EG → Release |
+| 27 | DELAY → Mix |
+| 28 | REVERB → Mix |
+
+Dials take over softly. A pot has a position of its own, and on plugging in it
+will not agree with what is on screen, so a dial does nothing until it reaches
+the value it is pointed at, then tracks it from there. While it waits, the knob
+shows a small blue marker on its rim for where the pot is sitting, so you know
+which way to turn. Dragging a knob on screen hands it back, and the dial has to
+pick it up again.
+
+To map something else, press **MIDI learn**, click the knob you want, and move
+a dial. Click a knob you have armed a second time to clear it. Assignments are
+saved in the browser and come back next time. Any knob on the panel can be
+mapped; CC 64 stays the sustain pedal and cannot be reassigned.
 
 ## Arpeggiator
 

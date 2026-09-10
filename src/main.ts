@@ -1,6 +1,7 @@
 import { AudioEngine } from "./audio-engine";
 import { defaultPatch, type ParamId } from "./dsp/params";
 import type { SynthEvent } from "./dsp/synth";
+import { CcMap, SUSTAIN_CC } from "./midi/cc-map";
 import { KeyboardInput } from "./midi/keyboard-input";
 import { MidiInput } from "./midi/midi-input";
 import { ScreenKeyboard } from "./ui/keyboard";
@@ -16,21 +17,36 @@ document.addEventListener("selectstart", (event) => {
   if (!node?.closest(".selectable")) event.preventDefault();
 });
 
-const SUSTAIN_CC = 64;
+const STORAGE_KEY = "midi-cc-map";
 
 const engine = new AudioEngine();
 const patch = defaultPatch();
+const ccMap = loadCcMap();
+let learning = false;
+let armed: ParamId | null = null;
 
 const startButton = document.getElementById("start") as HTMLButtonElement;
+const learnButton = document.getElementById("learn") as HTMLButtonElement;
 const status = document.getElementById("status") as HTMLElement;
 const panelRoot = document.getElementById("panel") as HTMLElement;
 const keyboardRoot = document.getElementById("keyboard") as HTMLElement;
 const beatLed = document.getElementById("beat") as HTMLElement;
 
-const panel = new Panel(panelRoot, patch, (id: ParamId, value: number) => {
+const panel = new Panel(panelRoot, patch, {
+  change: (id, value) => {
+    setParam(id, value);
+    // Moved by hand, so its dial has to pick the knob up again rather than
+    // yanking the value back where the pot happens to be sitting.
+    ccMap.release(id);
+    panel.setPot(id, null);
+  },
+  learn: (id) => armFor(id),
+});
+
+function setParam(id: ParamId, value: number): void {
   patch[id] = value;
   engine.setParam(id, value);
-});
+}
 
 const screenKeyboard = new ScreenKeyboard(keyboardRoot, {
   noteOn: (note, velocity) => noteOn(note, velocity),
@@ -81,15 +97,112 @@ function pulseBeat(step: number): void {
   beatTimer = window.setTimeout(() => beatLed.classList.remove("on"), 70);
 }
 
+// MIDI learn: press the button, click a knob, move a dial. Assignments live in
+// localStorage, so a controller stays mapped across reloads.
+function loadCcMap(): CcMap {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored ? CcMap.fromJSON(JSON.parse(stored)) : new CcMap();
+  } catch {
+    // Private mode, or a half-written entry. The factory map is a fine answer.
+    return new CcMap();
+  }
+}
+
+function saveCcMap(): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(ccMap.toJSON()));
+  } catch {
+    // Storage refused. The map still works for this session.
+  }
+}
+
+function ccLabel(id: ParamId): string | null {
+  const cc = ccMap.ccFor(id);
+  return cc === null ? null : `CC ${cc}`;
+}
+
+function setLearning(on: boolean): void {
+  learning = on;
+  armed = null;
+  learnButton.classList.toggle("active", on);
+  learnButton.textContent = on ? "Learning" : "MIDI learn";
+  panel.setLearnMode(on, ccLabel);
+  panel.clearPots();
+  setStatus(on ? "Click a knob, then move a dial to assign it. Click it again to clear." : idleStatus);
+}
+
+/** Arm a knob for assignment, or clear the one that is already armed. */
+function armFor(id: ParamId): void {
+  if (armed === id) {
+    ccMap.clear(id);
+    saveCcMap();
+    armed = null;
+    panel.setArmed(null);
+    panel.refreshLabels(ccLabel);
+    setStatus("Assignment cleared. Click a knob to assign another.");
+    return;
+  }
+  armed = id;
+  panel.setArmed(id);
+  setStatus("Now move a dial on your controller.");
+}
+
+function onControlChange(controller: number, value: number): void {
+  if (controller === SUSTAIN_CC) {
+    setSustain(value >= 64);
+    return;
+  }
+
+  if (learning) {
+    if (armed === null) {
+      setStatus("Click a knob first, then move a dial.");
+      return;
+    }
+    ccMap.bind(controller, armed);
+    saveCcMap();
+    armed = null;
+    panel.setArmed(null);
+    panel.refreshLabels(ccLabel);
+    setStatus(`Assigned CC ${controller}. Click another knob, or turn learning off.`);
+    return;
+  }
+
+  const result = ccMap.handle(controller, value, (id) => patch[id]);
+  if (!result) return;
+  if (result.type === "applied") {
+    setParam(result.id, result.value);
+    panel.setValue(result.id, result.value);
+    panel.setPot(result.id, null);
+  } else if (result.type === "waiting") {
+    // The dial has not reached the knob yet. Show where it is so the player
+    // knows which way to turn.
+    panel.setPot(result.id, result.pot);
+  }
+}
+
+learnButton.disabled = true;
+learnButton.addEventListener("click", () => setLearning(!learning));
+
 new KeyboardInput({
   noteOn,
   noteOff,
   sustain: setSustain,
-  octaveChanged: (base) => setStatus(`Computer keyboard octave: C${base / 12 - 1}`),
+  octaveChanged: (base) => setIdleStatus(`Computer keyboard octave: C${base / 12 - 1}`),
 }).attach();
 
 function setStatus(text: string): void {
   status.textContent = text;
+}
+
+/**
+ * What the status line says when nothing else is going on: which MIDI devices
+ * are connected. Learn mode borrows the line and hands it back.
+ */
+let idleStatus = "";
+function setIdleStatus(text: string): void {
+  idleStatus = text;
+  if (!learning) setStatus(text);
 }
 
 startButton.addEventListener("click", async () => {
@@ -103,31 +216,30 @@ startButton.addEventListener("click", async () => {
     await connectMidi();
   } catch (err) {
     startButton.disabled = false;
-    setStatus(`Could not start audio: ${(err as Error).message}`);
+    setIdleStatus(`Could not start audio: ${(err as Error).message}`);
   }
 });
 
 async function connectMidi(): Promise<void> {
   if (!MidiInput.isSupported()) {
-    setStatus("Web MIDI not available in this browser. Use the on-screen keys or A-K on your keyboard.");
+    setIdleStatus("Web MIDI not available in this browser. Use the on-screen keys or A-K on your keyboard.");
     return;
   }
-  setStatus("Requesting MIDI access. Approve the browser prompt if one appears.");
+  setIdleStatus("Requesting MIDI access. Approve the browser prompt if one appears.");
   const midi = new MidiInput({
     noteOn,
     noteOff,
-    // CC 64 is the sustain pedal. Anything from 64 up counts as down, which is
-    // what the MIDI spec says and what half-damper pedals send.
-    controlChange: (controller, value) => {
-      if (controller === SUSTAIN_CC) setSustain(value >= 64);
+    controlChange: onControlChange,
+    devicesChanged: (names) => {
+      setIdleStatus(names.length ? `MIDI: ${names.join(", ")}` : "MIDI ready. No devices connected.");
+      // Dials are no use before there is something to hear.
+      learnButton.disabled = names.length === 0;
     },
-    devicesChanged: (names) =>
-      setStatus(names.length ? `MIDI: ${names.join(", ")}` : "MIDI ready. No devices connected."),
   });
   try {
     await midi.connect();
   } catch (err) {
-    setStatus(`MIDI unavailable: ${(err as Error).message}`);
+    setIdleStatus(`MIDI unavailable: ${(err as Error).message}`);
   }
 }
 
