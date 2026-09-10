@@ -70,6 +70,14 @@ export type ParamId =
 
 export type ParamTaper = "linear" | "log";
 
+/**
+ * How the panel draws a control. Knob unless the param says otherwise: a
+ * two-state param is a switch, a short list of names is a segmented select,
+ * and a small count is a stepper. Stepped params with many positions (octave,
+ * clock division) stay knobs, because sweeping through them is the point.
+ */
+export type ParamControl = "knob" | "switch" | "select" | "stepper";
+
 export interface ParamDef {
   id: ParamId;
   label: string;
@@ -84,6 +92,8 @@ export interface ParamDef {
   unit?: string;
   /** Labels for discrete values, indexed from `min`. */
   choices?: string[];
+  /** Widget to draw. Defaults to a knob. */
+  control?: ParamControl;
 }
 
 export const WAVEFORMS = ["saw", "square", "triangle"] as const;
@@ -99,63 +109,102 @@ export const LFO_TARGETS = ["cutoff", "pitch", "shape"] as const;
 
 const OFF_ON = ["off", "on"];
 
+/**
+ * Performance controls rather than patch controls. The panel lifts this group
+ * out of the scrolling section list and into the transport strip, so volume,
+ * tempo and the arpeggiator stay reachable with every section collapsed.
+ */
+export const GLOBAL_GROUP = "GLOBAL";
+
+/**
+ * Ordered the way the signal flows, which is the order the panel reads in:
+ * what allocates notes, then what makes them (oscillators into the mixer),
+ * then what shapes them (filter, then the two envelopes), then what modulates
+ * them, then the arpeggiator, then the effects bus. `PARAM_INDEX` is derived
+ * from this array and nothing persists an index, so the order is free to
+ * change; only `ParamId` is load-bearing.
+ */
 export const PARAMS: readonly ParamDef[] = [
-  { id: "osc1Wave", label: "Wave", group: "VCO 1", min: 0, max: 2, default: 0, step: 1, choices: [...WAVEFORMS] },
+  { id: "masterVolume", label: "Volume", group: GLOBAL_GROUP, min: 0, max: 1, default: 0.7 },
+  // Shared by the arpeggiator, LFO sync and delay sync, which is why tempo
+  // lives up here rather than inside ARP with the controls named after it.
+  { id: "tempo", label: "Tempo", group: GLOBAL_GROUP, min: 30, max: 300, default: 120, unit: "bpm" },
+  { id: "arpOn", label: "Arp", group: GLOBAL_GROUP, min: 0, max: 1, default: 0, step: 1, choices: OFF_ON, control: "switch" },
+
+  // How notes are allocated, before anything that makes a sound.
+  { id: "voiceMode", label: "Mode", group: "VOICE", min: 0, max: 1, default: 1, step: 1, choices: [...VOICE_MODES], control: "switch" },
+  { id: "polyVoices", label: "Voices", group: "VOICE", min: 2, max: 8, default: 8, step: 1, control: "stepper" },
+  { id: "glide", label: "Glide", group: "VOICE", min: 0, max: 2, default: 0, taper: "log", unit: "s" },
+
+  { id: "osc1Wave", label: "Wave", group: "VCO 1", min: 0, max: 2, default: 0, step: 1, choices: [...WAVEFORMS], control: "select" },
   { id: "osc1Octave", label: "Octave", group: "VCO 1", min: -2, max: 2, default: 0, step: 1, choices: ["16'", "8'", "4'", "2'", "1'"] },
   { id: "osc1Shape", label: "Shape", group: "VCO 1", min: 0, max: 1, default: 0 },
-  { id: "osc2Wave", label: "Wave", group: "VCO 2", min: 0, max: 2, default: 0, step: 1, choices: [...WAVEFORMS] },
+  { id: "osc2Wave", label: "Wave", group: "VCO 2", min: 0, max: 2, default: 0, step: 1, choices: [...WAVEFORMS], control: "select" },
   { id: "osc2Octave", label: "Octave", group: "VCO 2", min: -2, max: 2, default: 0, step: 1, choices: ["16'", "8'", "4'", "2'", "1'"] },
   { id: "osc2Pitch", label: "Pitch", group: "VCO 2", min: -12, max: 12, default: 0, step: 1, unit: "st" },
   { id: "osc2Detune", label: "Detune", group: "VCO 2", min: -50, max: 50, default: 0, unit: "c" },
   { id: "osc2Shape", label: "Shape", group: "VCO 2", min: 0, max: 1, default: 0 },
+
   { id: "mixOsc1", label: "VCO 1", group: "MIXER", min: 0, max: 1, default: 1 },
   { id: "mixOsc2", label: "VCO 2", group: "MIXER", min: 0, max: 1, default: 0 },
   { id: "mixSub", label: "Sub", group: "MIXER", min: 0, max: 1, default: 0 },
   { id: "mixNoise", label: "Noise", group: "MIXER", min: 0, max: 1, default: 0 },
-  { id: "ampAttack", label: "Attack", group: "AMP EG", min: 0.001, max: 5, default: 0.005, taper: "log", unit: "s" },
-  { id: "ampDecay", label: "Decay", group: "AMP EG", min: 0.001, max: 5, default: 0.3, taper: "log", unit: "s" },
-  { id: "ampSustain", label: "Sustain", group: "AMP EG", min: 0, max: 1, default: 0.8 },
-  { id: "ampRelease", label: "Release", group: "AMP EG", min: 0.001, max: 5, default: 0.25, taper: "log", unit: "s" },
+
   { id: "filterCutoff", label: "Cutoff", group: "VCF", min: 20, max: 18000, default: 18000, taper: "log", unit: "Hz" },
   { id: "filterResonance", label: "Reso", group: "VCF", min: 0, max: 1, default: 0 },
   { id: "filterDrive", label: "Drive", group: "VCF", min: 1, max: 8, default: 1 },
   { id: "filterKeyTrack", label: "Key", group: "VCF", min: 0, max: 1, default: 0 },
   { id: "filterEnvAmount", label: "EG Int", group: "VCF", min: -1, max: 1, default: 0 },
-  { id: "hpfCutoff", label: "HP Cut", group: "VCF", min: 20, max: 2000, default: 20, taper: "log", unit: "Hz" },
+
   { id: "filterAttack", label: "Attack", group: "VCF EG", min: 0.001, max: 5, default: 0.005, taper: "log", unit: "s" },
   { id: "filterDecay", label: "Decay", group: "VCF EG", min: 0.001, max: 5, default: 0.5, taper: "log", unit: "s" },
   { id: "filterSustain", label: "Sustain", group: "VCF EG", min: 0, max: 1, default: 0.4 },
   { id: "filterRelease", label: "Release", group: "VCF EG", min: 0.001, max: 5, default: 0.3, taper: "log", unit: "s" },
-  { id: "voiceMode", label: "Mode", group: "VOICE", min: 0, max: 1, default: 1, step: 1, choices: [...VOICE_MODES] },
-  { id: "polyVoices", label: "Voices", group: "VOICE", min: 2, max: 8, default: 8, step: 1 },
-  { id: "glide", label: "Glide", group: "VOICE", min: 0, max: 2, default: 0, taper: "log", unit: "s" },
-  { id: "lfoWave", label: "Wave", group: "LFO", min: 0, max: LFO_WAVES.length - 1, default: 0, step: 1, choices: [...LFO_WAVES] },
-  { id: "lfoRate", label: "Rate", group: "LFO", min: 0.05, max: 30, default: 5, taper: "log", unit: "Hz" },
-  { id: "lfoSync", label: "Sync", group: "LFO", min: 0, max: 1, default: 0, step: 1, choices: OFF_ON },
-  { id: "lfoDivision", label: "Div", group: "LFO", min: 0, max: DIVISION_LABELS.length - 1, default: DEFAULT_DIVISION, step: 1, choices: DIVISION_LABELS },
-  { id: "lfoTarget", label: "Target", group: "LFO", min: 0, max: LFO_TARGETS.length - 1, default: 0, step: 1, choices: [...LFO_TARGETS] },
+
+  // The amp envelope is the last stage in the voice, so it reads after the
+  // filter rather than before it.
+  { id: "ampAttack", label: "Attack", group: "AMP EG", min: 0.001, max: 5, default: 0.005, taper: "log", unit: "s" },
+  { id: "ampDecay", label: "Decay", group: "AMP EG", min: 0.001, max: 5, default: 0.3, taper: "log", unit: "s" },
+  { id: "ampSustain", label: "Sustain", group: "AMP EG", min: 0, max: 1, default: 0.8 },
+  { id: "ampRelease", label: "Release", group: "AMP EG", min: 0.001, max: 5, default: 0.25, taper: "log", unit: "s" },
+
+  // Target and depth first: what the LFO does matters before how fast it does
+  // it. Sync sits next to the two controls it swaps between.
+  { id: "lfoTarget", label: "Target", group: "LFO", min: 0, max: LFO_TARGETS.length - 1, default: 0, step: 1, choices: [...LFO_TARGETS], control: "select" },
+  { id: "lfoWave", label: "Wave", group: "LFO", min: 0, max: LFO_WAVES.length - 1, default: 0, step: 1, choices: [...LFO_WAVES], control: "select" },
   { id: "lfoDepth", label: "Depth", group: "LFO", min: 0, max: 1, default: 0 },
+  { id: "lfoSync", label: "Sync", group: "LFO", min: 0, max: 1, default: 0, step: 1, choices: OFF_ON, control: "switch" },
+  { id: "lfoRate", label: "Rate", group: "LFO", min: 0.05, max: 30, default: 5, taper: "log", unit: "Hz" },
+  { id: "lfoDivision", label: "Div", group: "LFO", min: 0, max: DIVISION_LABELS.length - 1, default: DEFAULT_DIVISION, step: 1, choices: DIVISION_LABELS },
+
   { id: "modWheel", label: "Mod", group: "MOD", min: 0, max: 1, default: 0 },
   { id: "velToCutoff", label: "Vel Cut", group: "MOD", min: 0, max: 1, default: 0 },
   { id: "velToAmp", label: "Vel Amp", group: "MOD", min: 0, max: 1, default: 0.7 },
-  { id: "tempo", label: "Tempo", group: "CLOCK", min: 30, max: 300, default: 120, unit: "bpm" },
-  { id: "arpRate", label: "Rate", group: "CLOCK", min: 0, max: DIVISION_LABELS.length - 1, default: DEFAULT_DIVISION, step: 1, choices: DIVISION_LABELS },
-  { id: "arpSwing", label: "Swing", group: "CLOCK", min: 0, max: 75, default: 0, unit: "%" },
-  { id: "arpGate", label: "Gate", group: "CLOCK", min: 0.05, max: 1, default: 0.5 },
-  { id: "arpOn", label: "Arp", group: "ARP", min: 0, max: 1, default: 0, step: 1, choices: OFF_ON },
-  { id: "arpMode", label: "Mode", group: "ARP", min: 0, max: ARP_MODES.length - 1, default: 0, step: 1, choices: [...ARP_MODES] },
-  { id: "arpOctaves", label: "Range", group: "ARP", min: 1, max: 4, default: 1, step: 1, choices: ["1 oct", "2 oct", "3 oct", "4 oct"] },
-  { id: "arpRatchet", label: "Ratchet", group: "ARP", min: 1, max: 4, default: 1, step: 1, choices: ["x1", "x2", "x3", "x4"] },
-  { id: "arpLatch", label: "Latch", group: "ARP", min: 0, max: 1, default: 0, step: 1, choices: OFF_ON },
+
+  // Everything the arpeggiator owns, in one place. Rate, swing and gate shape
+  // its steps; they were split off into a CLOCK group that only ever held them
+  // and the tempo now in the transport strip.
+  { id: "arpMode", label: "Mode", group: "ARP", min: 0, max: ARP_MODES.length - 1, default: 0, step: 1, choices: [...ARP_MODES], control: "select" },
+  { id: "arpOctaves", label: "Range", group: "ARP", min: 1, max: 4, default: 1, step: 1, choices: ["1", "2", "3", "4"], control: "select" },
+  { id: "arpRate", label: "Rate", group: "ARP", min: 0, max: DIVISION_LABELS.length - 1, default: DEFAULT_DIVISION, step: 1, choices: DIVISION_LABELS },
+  { id: "arpSwing", label: "Swing", group: "ARP", min: 0, max: 75, default: 0, unit: "%" },
+  { id: "arpGate", label: "Gate", group: "ARP", min: 0.05, max: 1, default: 0.5 },
+  { id: "arpRatchet", label: "Ratchet", group: "ARP", min: 1, max: 4, default: 1, step: 1, choices: ["x1", "x2", "x3", "x4"], control: "select" },
+  { id: "arpLatch", label: "Latch", group: "ARP", min: 0, max: 1, default: 0, step: 1, choices: OFF_ON, control: "switch" },
+
+  // The master high-pass is the first thing in `Bus`, ahead of both effects,
+  // and has nothing to do with the per-voice VCF it used to sit beside.
+  { id: "hpfCutoff", label: "HP Cut", group: "BUS", min: 20, max: 2000, default: 20, taper: "log", unit: "Hz" },
+
+  { id: "delaySync", label: "Sync", group: "DELAY", min: 0, max: 1, default: 0, step: 1, choices: OFF_ON, control: "switch" },
   { id: "delayTime", label: "Time", group: "DELAY", min: 0.02, max: 2, default: 0.35, taper: "log", unit: "s" },
-  { id: "delaySync", label: "Sync", group: "DELAY", min: 0, max: 1, default: 0, step: 1, choices: OFF_ON },
   { id: "delayDivision", label: "Div", group: "DELAY", min: 0, max: DIVISION_LABELS.length - 1, default: DEFAULT_DIVISION, step: 1, choices: DIVISION_LABELS },
   { id: "delayFeedback", label: "Feedback", group: "DELAY", min: 0, max: 0.95, default: 0.35 },
   { id: "delayMix", label: "Mix", group: "DELAY", min: 0, max: 1, default: 0 },
+
   { id: "reverbSize", label: "Size", group: "REVERB", min: 0, max: 1, default: 0.6 },
   { id: "reverbDamp", label: "Damp", group: "REVERB", min: 0, max: 1, default: 0.4 },
   { id: "reverbMix", label: "Mix", group: "REVERB", min: 0, max: 1, default: 0 },
-  { id: "masterVolume", label: "Volume", group: "MASTER", min: 0, max: 1, default: 0.7 },
 ];
 
 export const PARAM_INDEX: Readonly<Record<ParamId, number>> = Object.fromEntries(
