@@ -1,6 +1,6 @@
 import { Envelope } from "./envelope";
 import { LadderFilter } from "./filter";
-import { clamp, midiToHz, onePoleCoef } from "./math";
+import { clamp, makeRandom, midiToHz, onePoleCoef } from "./math";
 import { Oscillator } from "./oscillator";
 import { ParamStore, WAVEFORMS, type ParamId } from "./params";
 
@@ -34,16 +34,29 @@ const CONTROL_INTERVAL = 16;
 const LN2_OVER_12 = Math.LN2 / 12;
 
 /**
- * One sounding note: oscillator into ladder filter into amp envelope, the
- * order every subtractive synth is wired in, plus a glide smoother, a filter
- * envelope and a velocity gain. It has no idea whether it is the only voice or
- * one of eight.
+ * One sounding note: a four-source mixer into the ladder filter into the amp
+ * envelope, the order every subtractive synth is wired in, plus a glide
+ * smoother, a filter envelope and a velocity gain. It has no idea whether it
+ * is the only voice or one of eight.
+ *
+ * The mixer feeds VCO 1, VCO 2, a square sub an octave below VCO 1, and white
+ * noise. VCO 2 and the sub are tuned as ratios of VCO 1's frequency, worked
+ * out once per block, so the per-sample cost of a second oscillator is a
+ * multiply rather than another `midiToHz`. A source whose level is zero is not
+ * rendered at all: the default patch is VCO 1 alone and costs exactly what it
+ * did before there was a mixer. A silent oscillator's phase stops where it is,
+ * which is not a discontinuity when it comes back; the step in level is, and
+ * that is the same either way.
  *
  * Note priority, stealing and legato all live above this class, in the mono
  * voice's note stack or the poly pool's allocator.
  */
 export class Voice {
   private readonly osc: Oscillator;
+  private readonly osc2: Oscillator;
+  private readonly sub: Oscillator;
+  /** White noise. Seeded per voice, or eight voices would play the same noise in lockstep. */
+  private readonly noise: () => number;
   private readonly filter: LadderFilter;
   private readonly ampEnv: Envelope;
   private readonly filterEnv: Envelope;
@@ -60,8 +73,14 @@ export class Voice {
   constructor(
     private readonly sampleRate: number,
     private readonly params: ParamStore,
+    seed = 1,
   ) {
     this.osc = new Oscillator(sampleRate);
+    this.osc2 = new Oscillator(sampleRate);
+    this.sub = new Oscillator(sampleRate);
+    // Golden-ratio stride between voices, so the streams decorrelate instead
+    // of being near neighbours of one another.
+    this.noise = makeRandom(0x2545f491 + seed * 0x9e3779b1);
     this.filter = new LadderFilter(sampleRate);
     this.ampEnv = new Envelope(sampleRate);
     this.filterEnv = new Envelope(sampleRate);
@@ -101,6 +120,8 @@ export class Voice {
     // keeps its oscillator running so the handover does not click.
     if (wasSilent) {
       this.osc.reset();
+      this.osc2.reset();
+      this.sub.reset();
       this.filter.reset();
       // Set the cutoff on the first sample of a fresh note rather than up to a
       // control period into it, or a snappy filter envelope opens late.
@@ -134,6 +155,19 @@ export class Voice {
     const octave = Math.round(p.get("osc1Octave")) * 12;
     const shape = p.get("osc1Shape");
 
+    const wave2 = WAVEFORMS[Math.round(p.get("osc2Wave"))] ?? "saw";
+    const shape2 = p.get("osc2Shape");
+    // VCO 2's octave, coarse semitones and fine cents collapse into one ratio
+    // against VCO 1, so its pitch tracks the keyboard and glide for free.
+    const semitones2 =
+      Math.round(p.get("osc2Octave")) * 12 + Math.round(p.get("osc2Pitch")) + p.get("osc2Detune") / 100;
+    const ratio2 = Math.exp(semitones2 * LN2_OVER_12);
+
+    const mix1 = p.get("mixOsc1");
+    const mix2 = p.get("mixOsc2");
+    const mixSub = p.get("mixSub");
+    const mixNoise = p.get("mixNoise");
+
     const cutoff = p.get("filterCutoff");
     const keyTrack = p.get("filterKeyTrack");
     const envAmount = p.get("filterEnvAmount");
@@ -161,7 +195,14 @@ export class Voice {
         this.controlCountdown--;
       }
 
-      const sample = this.filter.process(this.osc.process(hz, wave, shape));
+      let source = mix1 > 0 ? this.osc.process(hz, wave, shape) * mix1 : 0;
+      if (mix2 > 0) source += this.osc2.process(hz * ratio2, wave2, shape2) * mix2;
+      // The sub is a square an octave under VCO 1, so it follows VCO 1's own
+      // octave switch rather than sitting at a fixed pitch.
+      if (mixSub > 0) source += this.sub.process(hz * 0.5, "square", 0) * mixSub;
+      if (mixNoise > 0) source += (this.noise() * 2 - 1) * mixNoise;
+
+      const sample = this.filter.process(source);
       const env = this.ampEnv.process();
 
       this.gainSmooth += (gainTarget - this.gainSmooth) * this.gainCoef;
@@ -244,7 +285,9 @@ export class MonoVoice implements VoiceEngine {
 
   constructor(sampleRate: number, params?: ParamStore) {
     this.params = params ?? new ParamStore();
-    this.voice = new Voice(sampleRate, this.params);
+    // A seed clear of the pool's, so mono and a poly voice ringing out
+    // together do not play the same noise twice.
+    this.voice = new Voice(sampleRate, this.params, 101);
   }
 
   noteOn(note: number, velocity: number): void {

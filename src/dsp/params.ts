@@ -13,6 +13,15 @@ export type ParamId =
   | "osc1Wave"
   | "osc1Octave"
   | "osc1Shape"
+  | "osc2Wave"
+  | "osc2Octave"
+  | "osc2Pitch"
+  | "osc2Detune"
+  | "osc2Shape"
+  | "mixOsc1"
+  | "mixOsc2"
+  | "mixSub"
+  | "mixNoise"
   | "ampAttack"
   | "ampDecay"
   | "ampSustain"
@@ -81,6 +90,15 @@ export const PARAMS: readonly ParamDef[] = [
   { id: "osc1Wave", label: "Wave", group: "VCO 1", min: 0, max: 2, default: 0, step: 1, choices: [...WAVEFORMS] },
   { id: "osc1Octave", label: "Octave", group: "VCO 1", min: -2, max: 2, default: 0, step: 1, choices: ["16'", "8'", "4'", "2'", "1'"] },
   { id: "osc1Shape", label: "Shape", group: "VCO 1", min: 0, max: 1, default: 0 },
+  { id: "osc2Wave", label: "Wave", group: "VCO 2", min: 0, max: 2, default: 0, step: 1, choices: [...WAVEFORMS] },
+  { id: "osc2Octave", label: "Octave", group: "VCO 2", min: -2, max: 2, default: 0, step: 1, choices: ["16'", "8'", "4'", "2'", "1'"] },
+  { id: "osc2Pitch", label: "Pitch", group: "VCO 2", min: -12, max: 12, default: 0, step: 1, unit: "st" },
+  { id: "osc2Detune", label: "Detune", group: "VCO 2", min: -50, max: 50, default: 0, unit: "c" },
+  { id: "osc2Shape", label: "Shape", group: "VCO 2", min: 0, max: 1, default: 0 },
+  { id: "mixOsc1", label: "VCO 1", group: "MIXER", min: 0, max: 1, default: 1 },
+  { id: "mixOsc2", label: "VCO 2", group: "MIXER", min: 0, max: 1, default: 0 },
+  { id: "mixSub", label: "Sub", group: "MIXER", min: 0, max: 1, default: 0 },
+  { id: "mixNoise", label: "Noise", group: "MIXER", min: 0, max: 1, default: 0 },
   { id: "ampAttack", label: "Attack", group: "AMP EG", min: 0.001, max: 5, default: 0.005, taper: "log", unit: "s" },
   { id: "ampDecay", label: "Decay", group: "AMP EG", min: 0.001, max: 5, default: 0.3, taper: "log", unit: "s" },
   { id: "ampSustain", label: "Sustain", group: "AMP EG", min: 0, max: 1, default: 0.8 },
