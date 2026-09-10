@@ -215,10 +215,13 @@ body.dragging { cursor: ns-resize; }
   border-right: 1px solid #999;
 }
 
+/* Zero width so a black key takes no room in the flex row and the white keys
+   stay evenly spaced; full height so the overlay below has a percentage to
+   resolve against, and so the key is hit-testable over the shape it draws. */
 .key.black {
   position: relative;
   width: 0;
-  height: 0;
+  height: 100%;
   z-index: 2;
 }
 
