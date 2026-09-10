@@ -19,6 +19,8 @@ Milestone 1 of 5, plus the arpeggiator from milestone 5. Current features:
   drive, key tracking, envelope amount, and its own filter envelope
 - Two-pole high-pass on the master
 - Stereo effects bus: ping-pong delay with tempo sync, and reverb
+- Per-voice LFO with four waves, tempo sync, and a target switch
+- Mod wheel and velocity routing
 - Sustain pedal (MIDI CC 64, or the space bar)
 - MIDI CC control of every knob, with soft takeover and on-panel learn
 - Arpeggiator with six note orders, a four-octave range, and latch
@@ -27,8 +29,7 @@ Milestone 1 of 5, plus the arpeggiator from milestone 5. Current features:
 - Web MIDI input, on-screen keyboard, and computer-keyboard playing
 - Offline-testable DSP core
 
-Coming next: LFO and modulation routing, oscillator sync and ring mod, presets,
-chorus.
+Coming next: oscillator sync, ring mod and cross mod, presets, chorus.
 See [CLAUDE.md](./CLAUDE.md) for the roadmap and architecture.
 
 ## Requirements
@@ -76,6 +77,29 @@ its own, so a chord is eight noise sources rather than one played loudly.
 
 Levels sum straight, as a real mixer does: four sources at full is four times
 one source, and MASTER → Volume is where you take that back.
+
+## LFO and modulation
+
+| Knob | What it does |
+|---|---|
+| LFO → Wave | Triangle, saw, square, or random. Random is sample and hold: one value per cycle, held flat |
+| LFO → Rate | 0.05 to 30 Hz when it is running free |
+| LFO → Sync | Take the rate from the tempo instead of the Rate knob |
+| LFO → Div | Which division to lock to when synced |
+| LFO → Target | Cutoff, pitch or shape. One at a time |
+| LFO → Depth | How far it moves the target. Cutoff swings four octaves at full, pitch an octave either way, so vibrato lives low on the knob |
+| MOD → Mod | The mod wheel, which arrives on CC 1. It adds to Depth rather than scaling it, so a patch with the LFO parked still comes alive when you push the wheel |
+| MOD → Vel Cut | How much velocity opens the filter |
+| MOD → Vel Amp | How much velocity changes loudness. At zero the keyboard plays flat, at one a soft note nearly disappears |
+
+Every voice has its own LFO and it restarts with each note, so a chord shimmers
+rather than pulsing in lockstep.
+
+The Shape knobs now do something on every wave. On a square it is pulse width.
+On a saw it subtracts a second saw at an offset, notching harmonics out and
+thinning the tone toward something hollow and nasal. On a triangle it folds the
+wave, reflecting the peaks back down and growing harmonics a triangle does not
+otherwise have.
 
 ## Filter
 

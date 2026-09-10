@@ -8,6 +8,7 @@
 
 import { ARP_MODES } from "./arpeggiator";
 import { DEFAULT_DIVISION, DIVISION_LABELS } from "./clock";
+import { LFO_WAVES } from "./lfo";
 
 export type ParamId =
   | "osc1Wave"
@@ -39,6 +40,15 @@ export type ParamId =
   | "voiceMode"
   | "polyVoices"
   | "glide"
+  | "lfoWave"
+  | "lfoRate"
+  | "lfoSync"
+  | "lfoDivision"
+  | "lfoTarget"
+  | "lfoDepth"
+  | "modWheel"
+  | "velToCutoff"
+  | "velToAmp"
   | "tempo"
   | "arpRate"
   | "arpSwing"
@@ -84,6 +94,9 @@ export const WAVEFORMS = ["saw", "square", "triangle"] as const;
  */
 export const VOICE_MODES = ["mono", "poly"] as const;
 
+/** Where the LFO is routed. One destination at a time, as on the hardware. */
+export const LFO_TARGETS = ["cutoff", "pitch", "shape"] as const;
+
 const OFF_ON = ["off", "on"];
 
 export const PARAMS: readonly ParamDef[] = [
@@ -116,6 +129,15 @@ export const PARAMS: readonly ParamDef[] = [
   { id: "voiceMode", label: "Mode", group: "VOICE", min: 0, max: 1, default: 1, step: 1, choices: [...VOICE_MODES] },
   { id: "polyVoices", label: "Voices", group: "VOICE", min: 2, max: 8, default: 8, step: 1 },
   { id: "glide", label: "Glide", group: "VOICE", min: 0, max: 2, default: 0, taper: "log", unit: "s" },
+  { id: "lfoWave", label: "Wave", group: "LFO", min: 0, max: LFO_WAVES.length - 1, default: 0, step: 1, choices: [...LFO_WAVES] },
+  { id: "lfoRate", label: "Rate", group: "LFO", min: 0.05, max: 30, default: 5, taper: "log", unit: "Hz" },
+  { id: "lfoSync", label: "Sync", group: "LFO", min: 0, max: 1, default: 0, step: 1, choices: OFF_ON },
+  { id: "lfoDivision", label: "Div", group: "LFO", min: 0, max: DIVISION_LABELS.length - 1, default: DEFAULT_DIVISION, step: 1, choices: DIVISION_LABELS },
+  { id: "lfoTarget", label: "Target", group: "LFO", min: 0, max: LFO_TARGETS.length - 1, default: 0, step: 1, choices: [...LFO_TARGETS] },
+  { id: "lfoDepth", label: "Depth", group: "LFO", min: 0, max: 1, default: 0 },
+  { id: "modWheel", label: "Mod", group: "MOD", min: 0, max: 1, default: 0 },
+  { id: "velToCutoff", label: "Vel Cut", group: "MOD", min: 0, max: 1, default: 0 },
+  { id: "velToAmp", label: "Vel Amp", group: "MOD", min: 0, max: 1, default: 0.7 },
   { id: "tempo", label: "Tempo", group: "CLOCK", min: 30, max: 300, default: 120, unit: "bpm" },
   { id: "arpRate", label: "Rate", group: "CLOCK", min: 0, max: DIVISION_LABELS.length - 1, default: DEFAULT_DIVISION, step: 1, choices: DIVISION_LABELS },
   { id: "arpSwing", label: "Swing", group: "CLOCK", min: 0, max: 75, default: 0, unit: "%" },

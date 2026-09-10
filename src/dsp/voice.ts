@@ -1,8 +1,9 @@
 import { Envelope } from "./envelope";
 import { LadderFilter } from "./filter";
+import { Lfo } from "./lfo";
 import { clamp, makeRandom, midiToHz, onePoleCoef } from "./math";
 import { Oscillator } from "./oscillator";
-import { ParamStore, WAVEFORMS, type ParamId } from "./params";
+import { LFO_TARGETS, ParamStore, WAVEFORMS, type ParamId } from "./params";
 
 /**
  * Anything that turns note events into sound: the mono voice, or the poly
@@ -21,6 +22,12 @@ export interface VoiceEngine {
 
 /** Octaves the filter envelope sweeps at full EG Int, in either direction. */
 const ENV_OCTAVES = 6;
+/** Octaves the LFO sweeps the cutoff at full depth, either side of where it sits. */
+const LFO_CUTOFF_OCTAVES = 4;
+/** Semitones the LFO bends pitch at full depth: an octave either way, so gentle vibrato lives low on the knob. */
+const LFO_PITCH_SEMITONES = 12;
+/** Octaves a full-velocity note opens the filter at full Vel Cut. */
+const VELOCITY_OCTAVES = 4;
 
 /**
  * Samples between filter cutoff updates when something is modulating it.
@@ -57,6 +64,7 @@ export class Voice {
   private readonly sub: Oscillator;
   /** White noise. Seeded per voice, or eight voices would play the same noise in lockstep. */
   private readonly noise: () => number;
+  private readonly lfo: Lfo;
   private readonly filter: LadderFilter;
   private readonly ampEnv: Envelope;
   private readonly filterEnv: Envelope;
@@ -64,11 +72,14 @@ export class Voice {
   private targetNote = 60;
   private currentNote = 60;
   private glideCoef = 1;
-  private velocityGain = 1;
+  /** Velocity as 0..1. The gain it earns is worked out per block, so Vel Amp can move under a held note. */
+  private velocity = 1;
 
   private gainSmooth = 0;
   private readonly gainCoef: number;
   private controlCountdown = 0;
+  private pitchCountdown = 0;
+  private pitchBend = 1;
 
   constructor(
     private readonly sampleRate: number,
@@ -81,6 +92,7 @@ export class Voice {
     // Golden-ratio stride between voices, so the streams decorrelate instead
     // of being near neighbours of one another.
     this.noise = makeRandom(0x2545f491 + seed * 0x9e3779b1);
+    this.lfo = new Lfo(sampleRate, seed);
     this.filter = new LadderFilter(sampleRate);
     this.ampEnv = new Envelope(sampleRate);
     this.filterEnv = new Envelope(sampleRate);
@@ -112,7 +124,7 @@ export class Voice {
    * the new pitch instead of swooping up from the note it was playing.
    */
   noteOn(note: number, velocity: number, glideFromCurrent = true): void {
-    this.velocityGain = 0.3 + 0.7 * clamp(velocity / 127, 0, 1);
+    this.velocity = clamp(velocity / 127, 0, 1);
     const wasSilent = !this.ampEnv.isActive();
     this.targetNote = note;
     if (wasSilent || !glideFromCurrent) this.currentNote = note;
@@ -129,6 +141,9 @@ export class Voice {
     }
     this.ampEnv.trigger();
     this.filterEnv.trigger();
+    // Each note starts its own cycle, so a chord shimmers instead of pulsing
+    // in lockstep.
+    this.lfo.retrigger();
   }
 
   /** Move to a new pitch without retriggering the envelope. */
@@ -143,7 +158,11 @@ export class Voice {
 
   add(out: Float32Array): void {
     const p = this.params;
-    const gainTarget = p.get("masterVolume") * this.velocityGain;
+    // Velocity to amplitude: at zero the keyboard plays flat, at one a soft
+    // note is silent. The default reproduces the fixed 30-to-100% curve this
+    // had before the knob existed.
+    const velAmount = p.get("velToAmp");
+    const gainTarget = p.get("masterVolume") * (1 - velAmount + velAmount * this.velocity);
     if (!this.ampEnv.isActive()) {
       // Nothing to mix. Settle the smoother on its target rather than leaving
       // it stale, so the next note starts at level instead of fading in.
@@ -163,6 +182,12 @@ export class Voice {
       Math.round(p.get("osc2Octave")) * 12 + Math.round(p.get("osc2Pitch")) + p.get("osc2Detune") / 100;
     const ratio2 = Math.exp(semitones2 * LN2_OVER_12);
 
+    const lfoTarget = LFO_TARGETS[clamp(Math.round(p.get("lfoTarget")), 0, LFO_TARGETS.length - 1)] ?? "cutoff";
+    // The mod wheel adds to the depth knob rather than scaling it, so a patch
+    // with no LFO showing still comes alive when the wheel goes up.
+    const lfoDepth = clamp(p.get("lfoDepth") + p.get("modWheel"), 0, 1);
+    const lfoOn = lfoDepth > 0;
+
     const mix1 = p.get("mixOsc1");
     const mix2 = p.get("mixOsc2");
     const mixSub = p.get("mixSub");
@@ -171,10 +196,17 @@ export class Voice {
     const cutoff = p.get("filterCutoff");
     const keyTrack = p.get("filterKeyTrack");
     const envAmount = p.get("filterEnvAmount");
-    // With neither modulator in play the cutoff is a per-block coefficient
-    // rather than a per-sample one, which is the common case and the cheap one.
-    const modulated = keyTrack !== 0 || envAmount !== 0;
-    if (!modulated) this.filter.setCutoff(cutoff);
+    const velCutoff = p.get("velToCutoff");
+    const lfoToCutoff = lfoOn && lfoTarget === "cutoff" ? lfoDepth * 12 * LFO_CUTOFF_OCTAVES : 0;
+    const lfoToPitch = lfoOn && lfoTarget === "pitch" ? lfoDepth * LFO_PITCH_SEMITONES : 0;
+    const lfoToShape = lfoOn && lfoTarget === "shape" ? lfoDepth : 0;
+    // Velocity does not change under a held note, so its share of the cutoff
+    // is a per-block constant rather than another per-sample term.
+    const velSemitones = velCutoff * this.velocity * 12 * VELOCITY_OCTAVES;
+    // With no modulator in play the cutoff is a per-block coefficient rather
+    // than a per-sample one, which is the common case and the cheap one.
+    const modulated = keyTrack !== 0 || envAmount !== 0 || lfoToCutoff !== 0;
+    if (!modulated) this.filter.setCutoff(cutoff * Math.exp(velSemitones * LN2_OVER_12));
 
     for (let i = 0; i < out.length; i++) {
       this.currentNote += (this.targetNote - this.currentNote) * this.glideCoef;
@@ -183,23 +215,42 @@ export class Voice {
       // The filter envelope runs whether or not it is routed, so turning EG
       // Int up mid-note picks it up where it already is.
       const filterEnv = this.filterEnv.process();
+      const lfo = lfoOn ? this.lfo.process() : 0;
       if (modulated) {
         if (this.controlCountdown <= 0) {
-          // Key tracking and envelope depth are both in semitones, so they add
-          // before the one conversion back to Hz.
+          // Key tracking, envelope depth, velocity and the LFO are all in
+          // semitones, so they add before the one conversion back to Hz.
           const semitones =
-            keyTrack * (this.currentNote - 60) + envAmount * filterEnv * 12 * ENV_OCTAVES;
+            keyTrack * (this.currentNote - 60) +
+            envAmount * filterEnv * 12 * ENV_OCTAVES +
+            velSemitones +
+            lfo * lfoToCutoff;
           this.filter.setCutoff(cutoff * Math.exp(semitones * LN2_OVER_12));
           this.controlCountdown = CONTROL_INTERVAL;
         }
         this.controlCountdown--;
       }
 
-      let source = mix1 > 0 ? this.osc.process(hz, wave, shape) * mix1 : 0;
-      if (mix2 > 0) source += this.osc2.process(hz * ratio2, wave2, shape2) * mix2;
+      // Vibrato is a ratio on both oscillators, recomputed at control rate
+      // like the cutoff: an exponential per sample buys nothing at LFO speeds.
+      if (lfoToPitch !== 0 && this.pitchCountdown <= 0) {
+        this.pitchBend = Math.exp(lfo * lfoToPitch * LN2_OVER_12);
+        this.pitchCountdown = CONTROL_INTERVAL;
+      }
+      this.pitchCountdown--;
+      const bend = lfoToPitch !== 0 ? this.pitchBend : 1;
+      const shapeMod = lfoToShape !== 0 ? lfo * lfoToShape : 0;
+
+      const bent = hz * bend;
+      const shape1 = shapeMod !== 0 ? clamp(shape + shapeMod, 0, 1) : shape;
+      let source = mix1 > 0 ? this.osc.process(bent, wave, shape1) * mix1 : 0;
+      if (mix2 > 0) {
+        const shapeB = shapeMod !== 0 ? clamp(shape2 + shapeMod, 0, 1) : shape2;
+        source += this.osc2.process(bent * ratio2, wave2, shapeB) * mix2;
+      }
       // The sub is a square an octave under VCO 1, so it follows VCO 1's own
       // octave switch rather than sitting at a fixed pitch.
-      if (mixSub > 0) source += this.sub.process(hz * 0.5, "square", 0) * mixSub;
+      if (mixSub > 0) source += this.sub.process(bent * 0.5, "square", 0) * mixSub;
       if (mixNoise > 0) source += (this.noise() * 2 - 1) * mixNoise;
 
       const sample = this.filter.process(source);
@@ -228,6 +279,15 @@ export class Voice {
       case "glide":
         this.glideCoef = v <= 0.001 ? 1 : onePoleCoef(v / 4.6, this.sampleRate);
         break;
+      case "lfoWave":
+        this.lfo.setWave(v);
+        break;
+      case "lfoRate":
+      case "lfoSync":
+      case "lfoDivision":
+      case "tempo":
+        this.applyLfoRate();
+        break;
       case "filterResonance":
         this.filter.setResonance(v);
         break;
@@ -252,11 +312,21 @@ export class Voice {
     }
   }
 
+  /** Free-running in Hz, or locked to the tempo and a division. */
+  private applyLfoRate(): void {
+    if (this.params.get("lfoSync") >= 0.5) {
+      this.lfo.setSynced(this.params.get("tempo"), this.params.get("lfoDivision"));
+    } else {
+      this.lfo.setRate(this.params.get("lfoRate"));
+    }
+  }
+
   private applyAllParams(): void {
     const ids = [
       "ampAttack", "ampDecay", "ampSustain", "ampRelease", "glide",
       "filterResonance", "filterDrive",
       "filterAttack", "filterDecay", "filterSustain", "filterRelease",
+      "lfoWave", "lfoRate",
     ] as const;
     for (const id of ids) {
       this.applyParam(id);
