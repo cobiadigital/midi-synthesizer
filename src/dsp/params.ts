@@ -128,6 +128,35 @@ export function paramDef(id: ParamId): ParamDef {
   return def;
 }
 
+/**
+ * Clamp to the param's range and snap it to its step, which is what makes a
+ * discrete control land on a choice rather than between two.
+ */
+export function snapParam(def: ParamDef, value: number): number {
+  const out = Math.min(def.max, Math.max(def.min, value));
+  return def.step ? def.min + Math.round((out - def.min) / def.step) * def.step : out;
+}
+
+/**
+ * Param value to 0..1 knob position, honouring the taper. Shared by the knob
+ * element and by MIDI CC mapping so a controller's travel matches what the
+ * knob does under a finger, log tapers and all.
+ */
+export function paramToNorm(def: ParamDef, value: number): number {
+  if (def.taper === "log" && def.min > 0) return Math.log(value / def.min) / Math.log(def.max / def.min);
+  return (value - def.min) / (def.max - def.min);
+}
+
+/** The inverse: 0..1 position to a snapped param value. */
+export function paramFromNorm(def: ParamDef, norm: number): number {
+  const clamped = Math.min(1, Math.max(0, norm));
+  const value =
+    def.taper === "log" && def.min > 0
+      ? def.min * Math.pow(def.max / def.min, clamped)
+      : def.min + clamped * (def.max - def.min);
+  return snapParam(def, value);
+}
+
 export type PatchValues = Record<ParamId, number>;
 
 export function defaultPatch(): PatchValues {
