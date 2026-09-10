@@ -315,7 +315,10 @@ npm run deploy     # manual wrangler deploy, rarely needed
 
 Cloudflare Workers Builds is connected to the GitHub repo and owns deploys.
 A merge to `main` runs `npm run build` then `npx wrangler deploy`; any other
-branch runs `npx wrangler versions upload` and gets a preview URL. Node
+branch runs `npx wrangler versions upload` and gets a preview URL. Production
+is `synth.cobia.dev`, attached to the Worker as a custom domain in the
+dashboard rather than as a `routes` block, so deploys leave the hostname
+alone; workers.dev stays on as the address preview versions hang off. Node
 version comes from `.node-version`. `.github/workflows/ci.yml` runs typecheck,
 tests, and build on pull requests, because the Cloudflare build only
 typechecks. Do not add a deploy step to GitHub Actions: it would duplicate

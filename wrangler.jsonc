@@ -10,8 +10,11 @@
   "name": "midi-synthesizer",
   "compatibility_date": "2026-01-01",
 
-  // Serve on <name>.<subdomain>.workers.dev. Swap for a "routes" block when a
-  // custom domain is attached.
+  // The production hostname is synth.cobia.dev, attached to this Worker as a
+  // custom domain in the Cloudflare dashboard rather than declared here, so
+  // the DNS record and certificate are not re-created on every deploy. This
+  // keeps <name>.<subdomain>.workers.dev serving alongside it, which is what
+  // preview versions of non-production branches are addressed under.
   "workers_dev": true,
 
   "assets": {

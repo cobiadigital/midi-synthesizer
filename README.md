@@ -5,6 +5,8 @@ MIDI keyboard, and is built to be deployed as a static PWA on Cloudflare
 Workers. The design target is a hybrid of the Korg Minilogue's panel and
 feature set with a Moog-style ladder filter.
 
+Live at **<https://synth.cobia.dev>**.
+
 ## Status
 
 Milestone 1 of 5, plus the arpeggiator from milestone 5. Current features:
@@ -248,6 +250,11 @@ needed for normal work.
    Secrets** on the Worker itself.
 4. Save. The first build starts immediately and the app lands at
    `https://midi-synthesizer.<your-subdomain>.workers.dev`.
+5. Attach the custom domain: **Worker → Settings → Domains & Routes → Add →
+   Custom domain**, then `synth.cobia.dev`. Cloudflare creates the DNS record
+   and certificate, and the workers.dev URL keeps working as before. This is
+   deliberately not declared in `wrangler.jsonc`, so a deploy never has to
+   re-establish the hostname.
 
 Node version comes from `.node-version` (currently 22), so the build runner
 and CI stay on the same major as local development.
@@ -256,7 +263,7 @@ and CI stay on the same major as local development.
 
 | Event | Result |
 |---|---|
-| Merge to `main` | Build, then `wrangler deploy`. Live URL updates. |
+| Merge to `main` | Build, then `wrangler deploy`. <https://synth.cobia.dev> updates. |
 | Push to any other branch (including PR branches) | Build, then `wrangler versions upload`. A preview version with its own URL, live traffic untouched. |
 
 The preview URL appears in the build log and on the Worker's **Deployments**
