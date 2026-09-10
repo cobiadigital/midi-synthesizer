@@ -16,8 +16,7 @@ It plays eight-voice polyphonic by default, with a mono mode that keeps the
 note stack, legato and glide. Each voice mixes two oscillators, a sub and
 noise into its own ladder filter and filter envelope; the voices sum to mono
 and a stereo effects bus (high-pass, ping-pong delay, reverb) is what makes the
-output stereo. A Logic Pro Audio Unit is still
-out of scope.
+output stereo. A Logic Pro Audio Unit is still out of scope.
 
 ## Architecture
 
@@ -122,6 +121,38 @@ open gate (1.0) ties steps: the next note is pressed before the last is
 released, so the voice glides instead of restarting. Latch keeps released
 notes in the chord until a key goes down with nothing else held.
 
+### Modulation
+
+`Lfo` in `src/dsp/lfo.ts` is a modulation source, not something you hear, so
+nothing in it is band-limited and nothing needs to be: a PolyBLEP square exists
+to stop a 2 kHz edge folding back into the audible range, and a 5 Hz square's
+edges land where nothing is listening. `random` is sample and hold, one value
+per cycle held flat, seeded per instance so a pool does not step through the
+same sequence together. It can run free in Hz or follow the step clock, using
+the same arithmetic as `StepClock`.
+
+Every voice owns one, retriggered on note-on, so a chord shimmers rather than
+pulsing in lockstep. One destination at a time, chosen by `lfoTarget`:
+
+- **cutoff** joins the existing per-sample cutoff sum as another term in
+  semitones, which is why routing it there costs almost nothing: the
+  exponential it needs was already being computed at `CONTROL_INTERVAL`.
+- **pitch** is a ratio applied to every oscillator, recomputed at the same
+  control rate for the same reason.
+- **shape** is added to both oscillators' shape and clamped, per sample, since
+  it needs no exponential at all.
+
+The mod wheel is a param (`modWheel`), bound to CC 1 by default, so it also
+appears on the panel for anyone playing without one. It **adds** to the depth
+knob rather than scaling it, so a patch with the LFO parked still comes alive
+when the wheel goes up. It is exempt from CC soft takeover: a pot's position is
+invisible until it moves, but a wheel rests at zero where the player can see
+it, so making it earn takeover would just make it feel dead.
+
+Velocity reaches two places, both as amounts: `velToAmp` for loudness and
+`velToCutoff` for brightness. The cutoff share is a per-block constant, since
+velocity cannot change under a held note.
+
 ### Filter and effects
 
 `LadderFilter` in `src/dsp/filter.ts` is the per-voice VCF: four one-pole
@@ -187,11 +218,15 @@ smoothed.
 Noise is seeded per voice (`Voice`'s third constructor argument, supplied by
 the pool as the slot index). Eight voices sharing a stream would be one noise
 source at eight times the level rather than eight of them, which sums 6 dB hot
-and sounds like a single hiss rather than a chord. Glide is a one-pole smoother on the MIDI note
-number, applied per sample. Velocity scales gain between 30% and 100%. `add()`
-mixes into the buffer rather than replacing it, so engines can be summed; an
-idle voice returns early and snaps its gain smoother to target, which keeps
-output identical no matter how the render is chunked.
+and sounds like a single hiss rather than a chord.
+
+Glide is a one-pole smoother on the MIDI note number, applied per sample.
+Velocity is kept as 0..1 and turned into gain per block, so `velToAmp` can move
+under a held note; its default of 0.7 is exactly the fixed 30-to-100% curve the
+voice had before that knob existed. `add()` mixes into the buffer rather than
+replacing it, so engines can be summed; an idle voice returns early and snaps
+its gain smoother to target, which keeps output identical no matter how the
+render is chunked.
 
 `MonoVoice` drives one `Voice` from a note stack with last-note priority.
 Releasing the newest key while an older key is held slides back to the older
@@ -211,18 +246,38 @@ mixer. A big chord at a high master volume can therefore reach the output
 ceiling; the Volume knob is the headroom control, and filter drive and the
 effect mixes add to what it has to hold back.
 
-Worst case measured offline is about 13% of one x86 core per second of audio:
-eight voices sounding, all four mixer sources up, cutoff modulated, and delay,
-reverb and high-pass all on. The same eight voices on the default patch, VCO 1
-alone, are about 8%, which is what the skip-when-zero above buys. A phone has
+Worst case measured offline is about 17% of one x86 core per second of audio:
+eight voices sounding, all four mixer sources up, both oscillators shaped, the
+cutoff modulated, the LFO running, and delay, reverb and high-pass all on. The
+same eight voices on the default patch, VCO 1 alone, are about 8.7%, which is
+what the skip-when-zero above buys. Of the difference, shaping is the
+expensive part at roughly 3 points: a shaped saw computes a second PolyBLEP
+every sample. The LFO costs about 0.3 of a point, because routing it to the
+cutoff reuses an exponential that was already being computed. A phone has
 room but not a lot of it. Idle voices cost a branch. If that budget gets
 tight, the per-sample work in `Voice.add()` is where to look first.
 
 ### Oscillator
 
-PolyBLEP anti-aliasing. Triangle is a leaky integral of the square. `shape`
-currently only affects square (pulse width). Saw shape and triangle folding
-are reserved for milestone 3.
+PolyBLEP anti-aliasing. Triangle is a leaky integral of the square. What
+`shape` does depends on the wave:
+
+- **square**: pulse width, 50% to 95%.
+- **saw**: a second saw subtracted at a phase offset. The difference of two
+  saws is silent at every harmonic whose wavelength divides the offset evenly,
+  so sweeping shape sweeps a comb through the spectrum; at a half-cycle offset
+  the even harmonics vanish and what is left is hollow and nasal. The second
+  copy carries its own PolyBLEP, because it brings a second discontinuity per
+  cycle and an uncorrected one would alias.
+- **triangle**: wave folding. `fold()` reflects the signal back into range
+  rather than clipping at it, so the peaks turn around and head down again.
+  It is continuous and bounded, and periodic in 4 so any overshoot folds.
+
+At shape 0 every wave is bit-for-bit what it was before shaping existed, which
+there is a test for. The folder's corners are not band-limited and will alias
+if pushed hard; folding a triangle is gentle because there is little harmonic
+content to begin with, but folding a saw would not be, which is one reason
+shape means something different on each wave.
 
 ### Envelope
 
@@ -275,9 +330,10 @@ Setup steps for the dashboard live in README.md.
    two-pole high-pass on the master. Second VCO with its own wave, shape,
    octave, coarse pitch and fine detune; square sub an octave down; white
    noise; four-channel mixer.
-3. LFO with rate, wave, and target (pitch, shape, cutoff). Oscillator sync,
-   ring mod, cross mod. Saw shape and triangle fold. Mod wheel and velocity
-   routing.
+3. **Mostly done**: LFO with rate, wave, tempo sync and a target switch
+   (cutoff, pitch, shape), per voice and note-retriggered; saw shape and
+   triangle fold; mod wheel on CC 1 and velocity routed to loudness and
+   cutoff. Still to do: oscillator sync, ring mod, cross mod.
 4. **MIDI CC learn done**: eight dials mapped out of the box (CC 21 to 28, as
    a Launchkey Mini sends), soft takeover, and learn from the panel, saved to
    localStorage. Still to do: preset save and load (JSON in localStorage,
@@ -288,8 +344,7 @@ Setup steps for the dashboard live in README.md.
    random), octave range, latch, and a sample-accurate step clock with tempo,
    division, swing, gate and ratcheting. Effects bus **done**: stereo
    ping-pong delay, tempo-syncable to the same clock, and a Freeverb-style
-   reverb. Still to do: chorus, and syncing the LFO to the clock once it
-   exists.
+   reverb, and an LFO that syncs to the same clock. Still to do: chorus.
 
 ## Known browser constraints
 

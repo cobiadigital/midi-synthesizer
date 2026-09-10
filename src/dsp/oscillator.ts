@@ -26,9 +26,30 @@ export function polyBlep(t: number, dt: number): number {
  * `shape` (0..1) is the Minilogue-style "shape" control. Its meaning depends
  * on the waveform:
  *  - square: pulse width, from 50% (0) to 95% (1)
- *  - saw: ignored for now (reserved for a phase-offset double saw)
- *  - triangle: ignored for now (reserved for wave folding)
+ *  - saw: a second saw subtracted at a phase offset, which notches the
+ *    harmonics that fit the gap and thins the tone toward a nasal, hollow
+ *    sound
+ *  - triangle: wave folding, which reflects the peaks back down and grows
+ *    harmonics a triangle does not otherwise have
+ *
+ * At shape 0 every wave is exactly what it was before there was a shape
+ * control: the saw's second copy is at zero offset and cancels to nothing
+ * extra, and the folder passes its input straight through.
  */
+/** How far past full scale a fully folded triangle is driven before reflection. */
+const FOLD_GAIN = 3;
+
+/**
+ * Reflect a signal back into -1..1 rather than clipping at it: past the top it
+ * turns around and heads down again, which is what a wave folder does and
+ * where its harmonics come from. Continuous, bounded, and periodic in 4, so
+ * any input folds however far it overshoots.
+ */
+export function fold(x: number): number {
+  const q = (x + 1) / 4;
+  return 1 - 4 * Math.abs(q - Math.floor(q) - 0.5);
+}
+
 export class Oscillator {
   /** Phase in [0, 1). Public so tests and sync can inspect or reset it. */
   phase = 0;
@@ -50,7 +71,7 @@ export class Oscillator {
 
     switch (waveform) {
       case "saw": {
-        out = 2 * t - 1 - polyBlep(t, dt);
+        out = this.saw(t, dt, shape);
         break;
       }
       case "square": {
@@ -62,7 +83,7 @@ export class Oscillator {
         // from accumulating when frequency changes mid-note.
         const sq = this.square(t, dt, 0);
         this.triState = this.triState * (1 - dt * 0.05) + 4 * dt * sq;
-        out = this.triState;
+        out = shape > 0 ? fold(this.triState * (1 + shape * FOLD_GAIN)) : this.triState;
         break;
       }
     }
@@ -70,6 +91,23 @@ export class Oscillator {
     this.phase += dt;
     if (this.phase >= 1) this.phase -= 1;
     return out;
+  }
+
+  /**
+   * Saw, optionally minus a copy of itself a fraction of a cycle later. The
+   * difference of two saws is silent at the harmonics whose wavelength divides
+   * the offset evenly, so sweeping shape sweeps a comb through the spectrum.
+   * Each copy carries its own PolyBLEP: there are two discontinuities per
+   * cycle now, and an uncorrected one would alias.
+   */
+  private saw(t: number, dt: number, shape: number): number {
+    const first = 2 * t - 1 - polyBlep(t, dt);
+    if (shape <= 0) return first;
+    let offsetPhase = t + clamp(shape, 0, 1) * 0.5;
+    if (offsetPhase >= 1) offsetPhase -= 1;
+    const second = 2 * offsetPhase - 1 - polyBlep(offsetPhase, dt);
+    // Halved, so a fully thinned saw is not twice the level of a plain one.
+    return (first - second * shape) / (1 + shape * 0.5);
   }
 
   private square(t: number, dt: number, shape: number): number {

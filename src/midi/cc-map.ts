@@ -8,10 +8,17 @@ export const SUSTAIN_CC = 64;
 
 /**
  * Factory assignment for the eight top dials of a Launchkey Mini, which send
- * CC 21 to 28. Spread across filter, envelope and effects so every dial does
- * something audible before anything is remapped.
+ * CC 21 to 28, plus the mod wheel on CC 1 where every controller puts it.
+ * Spread across filter, envelope and effects so every dial does something
+ * audible before anything is remapped.
+ *
+ * The wheel is a param like any other, which means it also appears on the
+ * panel as MOD -> Mod for anyone playing without one. Soft takeover costs
+ * nothing there: a wheel at rest and a knob at zero already agree, so it
+ * engages on the first nudge.
  */
 export const DEFAULT_BINDINGS: ReadonlyArray<readonly [number, ParamId]> = [
+  [1, "modWheel"],
   [21, "filterCutoff"],
   [22, "filterResonance"],
   [23, "filterEnvAmount"],
@@ -29,6 +36,18 @@ export const DEFAULT_BINDINGS: ReadonlyArray<readonly [number, ParamId]> = [
  */
 const PICKUP_TOLERANCE = 1.5 / 127;
 
+/**
+ * Controls that take over the moment they move, with no pickup.
+ *
+ * Soft takeover exists because a pot's position is invisible until it is
+ * turned, so the value it would jump to is a surprise. A mod wheel has no such
+ * hidden state: it rests at zero, the player can see where it is, and pushing
+ * it is a request for that much modulation now. Making it earn takeover would
+ * mean a wheel that does nothing until it passes wherever the on-screen knob
+ * was left, which is exactly the deadness pickup is supposed to prevent.
+ */
+const IMMEDIATE_CCS = new Set([1]);
+
 /** What a control change did, so the UI can follow it. */
 export type CcResult =
   | { type: "applied"; id: ParamId; value: number }
@@ -44,6 +63,7 @@ export type CcResult =
  * dial leap the cutoff across the room, a binding stays disengaged until the
  * pot reaches or crosses the value on screen; from then on it tracks directly,
  * until something else moves that param and takeover has to be earned again.
+ * The mod wheel is exempt, for the reason given at IMMEDIATE_CCS.
  *
  * No DOM and no Web MIDI in here: it is a lookup table with a state machine,
  * which is what makes it testable offline.
@@ -111,7 +131,7 @@ export class CcMap {
     const previous = this.lastPot.get(cc);
     this.lastPot.set(cc, pot);
 
-    if (!this.engaged.has(id)) {
+    if (!this.engaged.has(id) && !IMMEDIATE_CCS.has(cc)) {
       const value = paramToNorm(def, current(id));
       const near = Math.abs(pot - value) <= PICKUP_TOLERANCE;
       // A pot swept past the value between two messages counts as reaching it:

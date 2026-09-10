@@ -29,7 +29,8 @@ describe("CcMap", () => {
     const map = new CcMap();
     expect(map.paramFor(21)).toBe("filterCutoff");
     expect(map.ccFor("reverbMix")).toBe(28);
-    expect(DEFAULT_BINDINGS).toHaveLength(8);
+    expect(map.paramFor(1)).toBe("modWheel");
+    expect(DEFAULT_BINDINGS).toHaveLength(9);
   });
 
   it("ignores a control change it has no binding for", () => {
@@ -88,6 +89,19 @@ describe("CcMap", () => {
       expect(p.send(map, 27, 70)?.type).toBe("waiting");
       expect(p.read("delayMix")).toBe(1);
     });
+  });
+
+  it("lets the mod wheel take over at once, since a wheel has a rest position", () => {
+    const map = new CcMap();
+    const p = patch({ modWheel: 0 });
+    // Pushed straight to three quarters with the knob at zero: a pot would sit
+    // and wait, a wheel is asking for that much modulation now.
+    const result = p.send(map, 1, 96);
+    expect(result?.type).toBe("applied");
+    expect(p.read("modWheel")).toBeCloseTo(96 / 127, 2);
+    // And it still tracks all the way back down to rest.
+    p.send(map, 1, 0);
+    expect(p.read("modWheel")).toBe(0);
   });
 
   describe("learning", () => {
