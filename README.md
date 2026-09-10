@@ -9,7 +9,9 @@ feature set with a Moog-style ladder filter.
 
 Milestone 1 of 5, plus the arpeggiator from milestone 5. Current features:
 
-- One anti-aliased oscillator (saw, square, triangle) with shape control
+- Two anti-aliased oscillators (saw, square, triangle) with shape control,
+  the second with octave, coarse pitch and fine detune
+- Square sub oscillator an octave below VCO 1, white noise, and a mixer
 - ADSR amplitude envelope
 - Eight-voice polyphony with note stealing, plus a mono mode with last-note
   priority, legato, and glide
@@ -25,7 +27,7 @@ Milestone 1 of 5, plus the arpeggiator from milestone 5. Current features:
 - Web MIDI input, on-screen keyboard, and computer-keyboard playing
 - Offline-testable DSP core
 
-Coming next: second oscillator and mixer, LFO and modulation routing, presets,
+Coming next: LFO and modulation routing, oscillator sync and ring mod, presets,
 chorus.
 See [CLAUDE.md](./CLAUDE.md) for the roadmap and architecture.
 
@@ -56,6 +58,24 @@ start audio without a click, so the button is not optional.
 
 Knobs: drag up and down, hold Shift for fine control, double-click to reset,
 scroll wheel for stepped changes.
+
+## Oscillators and mixer
+
+| Knob | What it does |
+|---|---|
+| VCO 1 / VCO 2 → Wave | Saw, square or triangle |
+| VCO 1 / VCO 2 → Octave | Footage, 16' to 1' |
+| VCO 1 / VCO 2 → Shape | Pulse width on the square. Reserved on the other two waves until milestone 3 |
+| VCO 2 → Pitch | Coarse, in semitones, up or down an octave. Seven semitones is a fifth against VCO 1 |
+| VCO 2 → Detune | Fine, in cents. A few cents off is what makes two oscillators beat and thicken |
+| MIXER → VCO 1, VCO 2, Sub, Noise | Level of each source into the filter |
+
+The sub is a square an octave below VCO 1 and follows its octave switch, so it
+stays an octave down wherever VCO 1 is set. Noise is white, and every voice has
+its own, so a chord is eight noise sources rather than one played loudly.
+
+Levels sum straight, as a real mixer does: four sources at full is four times
+one source, and MASTER → Volume is where you take that back.
 
 ## Filter
 

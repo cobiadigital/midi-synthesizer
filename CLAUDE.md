@@ -13,9 +13,10 @@ octave, pitch, sync, ring mod, cross mod, mixer with noise, two envelopes,
 LFO with targets) feeding a Moog four-pole ladder filter with drive.
 
 It plays eight-voice polyphonic by default, with a mono mode that keeps the
-note stack, legato and glide. Each voice runs its own ladder filter and filter
-envelope; the voices sum to mono and a stereo effects bus (high-pass, ping-pong
-delay, reverb) is what makes the output stereo. A Logic Pro Audio Unit is still
+note stack, legato and glide. Each voice mixes two oscillators, a sub and
+noise into its own ladder filter and filter envelope; the voices sum to mono
+and a stereo effects bus (high-pass, ping-pong delay, reverb) is what makes the
+output stereo. A Logic Pro Audio Unit is still
 out of scope.
 
 ## Architecture
@@ -166,9 +167,27 @@ is no limiter downstream.
 
 ### Voices
 
-`Voice` in `src/dsp/voice.ts` is one sounding note, wired oscillator into
-ladder filter into amp envelope: the order every subtractive synth uses. It
-also owns the filter envelope, a glide smoother and a velocity gain. Glide is a one-pole smoother on the MIDI note
+`Voice` in `src/dsp/voice.ts` is one sounding note, wired mixer into ladder
+filter into amp envelope: the order every subtractive synth uses. It also owns
+the filter envelope, a glide smoother and a velocity gain.
+
+The mixer feeds VCO 1, VCO 2, a square sub an octave below VCO 1, and white
+noise. VCO 2's octave, coarse semitones and fine cents collapse into a single
+ratio against VCO 1, worked out once per block, so a second oscillator costs a
+multiply per sample rather than another `midiToHz`, and it tracks the keyboard
+and glide for free. The sub is derived the same way, at half VCO 1's frequency,
+so it follows VCO 1's octave switch rather than sitting at a fixed pitch.
+
+A source whose mixer level is zero is not rendered: the default patch is VCO 1
+alone and costs what it did before the mixer existed. A silent oscillator's
+phase stops where it is, which is not a discontinuity when it comes back — the
+step in level is, and that is there either way, since mixer levels are not
+smoothed.
+
+Noise is seeded per voice (`Voice`'s third constructor argument, supplied by
+the pool as the slot index). Eight voices sharing a stream would be one noise
+source at eight times the level rather than eight of them, which sums 6 dB hot
+and sounds like a single hiss rather than a chord. Glide is a one-pole smoother on the MIDI note
 number, applied per sample. Velocity scales gain between 30% and 100%. `add()`
 mixes into the buffer rather than replacing it, so engines can be summed; an
 idle voice returns early and snaps its gain smoother to target, which keeps
@@ -192,10 +211,12 @@ mixer. A big chord at a high master volume can therefore reach the output
 ceiling; the Volume knob is the headroom control, and filter drive and the
 effect mixes add to what it has to hold back.
 
-Worst case measured offline (eight voices sounding, cutoff modulated, delay and
-reverb and high-pass all on) is about 11% of one x86 core per second of audio,
-so a phone has room but not a lot of it. Idle voices cost a branch. If that
-budget gets tight, the per-sample work in `Voice.add()` is where to look first.
+Worst case measured offline is about 13% of one x86 core per second of audio:
+eight voices sounding, all four mixer sources up, cutoff modulated, and delay,
+reverb and high-pass all on. The same eight voices on the default patch, VCO 1
+alone, are about 8%, which is what the skip-when-zero above buys. A phone has
+room but not a lot of it. Idle voices cost a branch. If that budget gets
+tight, the per-sample work in `Voice.add()` is where to look first.
 
 ### Oscillator
 
@@ -249,10 +270,11 @@ Setup steps for the dashboard live in README.md.
 ## Roadmap
 
 1. **Done.** Scaffold, one oscillator, amp envelope, MIDI in, keyboard UI.
-2. **Filter done**: four-pole ladder low-pass, oversampled 2x, with cutoff,
-   resonance, drive, key tracking and envelope amount, a dedicated filter
-   envelope, and a two-pole high-pass on the master. Still to do: second VCO
-   with pitch and detune, sub oscillator, noise, mixer.
+2. **Done.** Four-pole ladder low-pass, oversampled 2x, with cutoff, resonance,
+   drive, key tracking and envelope amount, a dedicated filter envelope, and a
+   two-pole high-pass on the master. Second VCO with its own wave, shape,
+   octave, coarse pitch and fine detune; square sub an octave down; white
+   noise; four-channel mixer.
 3. LFO with rate, wave, and target (pitch, shape, cutoff). Oscillator sync,
    ring mod, cross mod. Saw shape and triangle fold. Mod wheel and velocity
    routing.

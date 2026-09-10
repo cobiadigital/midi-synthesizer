@@ -38,7 +38,9 @@ export class PolyVoices implements VoiceEngine {
     private readonly params: ParamStore,
   ) {
     for (let i = 0; i < MAX_VOICES; i++) {
-      this.slots.push({ voice: new Voice(sampleRate, params), note: -1, serial: 0 });
+      // Each voice gets its own noise seed, or a chord with noise up would be
+      // one noise source at eight times the level rather than eight of them.
+      this.slots.push({ voice: new Voice(sampleRate, params, i + 1), note: -1, serial: 0 });
     }
   }
 
