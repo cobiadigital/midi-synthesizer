@@ -30,8 +30,8 @@ Three layers, strictly separated:
    the main thread. It is loaded via Vite's `?worker&url` import so its
    imports get bundled. It posts `SynthReply` messages back on blocks where
    the arpeggiator produced events.
-3. **Main thread** in `src/main.ts`, `src/audio-engine.ts`, `src/midi/`,
-   `src/ui/`. Talks to the worklet only through `SynthMessage` objects posted
+3. **Main thread** in `src/main.ts`, `src/audio-engine.ts`, `src/patch-url.ts`,
+   `src/midi/`, `src/ui/`. Talks to the worklet only through `SynthMessage` objects posted
    over the MessagePort. Never touches audio state directly.
 
 ### Parameters
@@ -166,6 +166,44 @@ must call `release()`, or the next twitch of a dial yanks the value back.
 The map lives in `localStorage` under `midi-cc-map`, and `fromJSON` drops
 bindings whose param this build no longer has, so a renamed control costs one
 assignment rather than the whole map.
+
+### Shareable links
+
+`src/patch-url.ts` is the patch as text: `encodePatch` and `decodePatch`, pure
+functions over `PatchValues` with no DOM in them, so they test offline. The
+format is sparse and keyed by `ParamId` (`#p=filterCutoff:820,arpOn:1`), which
+matters for the same reason the CC map stores ids rather than positions: a URL
+is persistence, and encoding `PARAMS` order into one would mean reordering the
+panel silently re-interpreted every link already shared. A param this build no
+longer has is dropped on read, exactly as `CcMap.fromJSON` drops a binding.
+
+Values carry four significant figures, finer than a cent of pitch across the
+widest taper here, which keeps a typical patch to about 200 characters and the
+worst case under 800. Sparse means the factory patch has no fragment at all and
+that a knob nudged inside the rounding does not lengthen the link. Everything
+read back goes through `snapParam`, so a hand-edited URL cannot put a control
+out of range.
+
+`ShareLink` in `src/ui/share.ts` is the part that touches the page. Two things
+in it are load-bearing:
+
+- Writes are debounced by 300ms. A knob drag emits a change per pointer move,
+  and WebKit throttles `replaceState` to roughly a hundred calls per thirty
+  seconds before refusing them, which one cutoff sweep would spend.
+- It is `replaceState` on the fragment, never `pushState` and never a query
+  string. `pushState` would make Back undo a knob move, and on a phone Back is
+  how you leave the page. A query string would reach the server and give
+  Cloudflare's cache one entry per patch; the fragment gives it one entry
+  total. `replaceState` also fires no `hashchange`, so the write path cannot
+  feed itself.
+
+A link pasted into a running page arrives as a `hashchange` and goes through
+`loadPatch` in `main.ts`, which must call `ccMap.release()` for every param it
+moves, the same as dragging a knob does. Skipping that is the bug that leaves
+the next twitch of a dial yanking values back.
+
+The codec is what milestone 4's presets need too: a preset is the same
+`PatchValues` through the same two functions, stored rather than pasted.
 
 ### Clock and arpeggiator
 
@@ -402,8 +440,10 @@ Setup steps for the dashboard live in README.md.
    cutoff. Still to do: oscillator sync, ring mod, cross mod.
 4. **MIDI CC learn done**: eight dials mapped out of the box (CC 21 to 28, as
    a Launchkey Mini sends), soft takeover, and learn from the panel, saved to
-   localStorage. Still to do: preset save and load (JSON in localStorage,
-   factory bank in `src/presets/`), PWA service worker for offline use.
+   localStorage. **Shareable links done**: the whole patch in the URL
+   fragment, live as you turn a knob, with a Share button. Still to do: preset
+   save and load (JSON in localStorage, factory bank in `src/presets/`, both
+   on `patch-url`'s codec), PWA service worker for offline use.
 5. Polyphony **done**: eight-voice pool with note stealing, a mono/poly
    switch, sustain pedal on CC 64, and a multi-touch on-screen keyboard.
    Arpeggiator **done**: modes (up, down, up-down, down-up, as played,

@@ -23,13 +23,14 @@ Milestone 1 of 5, plus the arpeggiator from milestone 5. Current features:
 - Mod wheel and velocity routing
 - Sustain pedal (MIDI CC 64, or the space bar)
 - MIDI CC control of every knob, with soft takeover and on-panel learn
+- Shareable links: the whole patch lives in the URL, so a bookmark is a preset
 - Arpeggiator with six note orders, a four-octave range, and latch
 - Sample-accurate step clock: tempo, division down to 1/32 and triplets,
   swing, gate length, and ratcheting
 - Web MIDI input, on-screen keyboard, and computer-keyboard playing
 - Offline-testable DSP core
 
-Coming next: oscillator sync, ring mod and cross mod, presets, chorus.
+Coming next: oscillator sync, ring mod and cross mod, saved presets, chorus.
 See [CLAUDE.md](./CLAUDE.md) for the roadmap and architecture.
 
 ## Requirements
@@ -206,6 +207,34 @@ a dial. Click a knob you have armed a second time to clear it. Assignments are
 saved in the browser and come back next time. Any knob on the panel can be
 mapped; CC 64 stays the sustain pedal and cannot be reassigned.
 
+## Sharing a patch
+
+The address bar always holds the sound you are hearing. Every knob and switch
+on the panel is written into the page's URL fragment as you move it, so a
+bookmark is a preset and a pasted link is the patch.
+
+Press **Share** to hand one over: on a phone that opens the system share sheet,
+on a desktop it copies the link to the clipboard. Opening a link sets the whole
+panel from it, including the controls it does not mention, which sit at their
+factory values.
+
+A link looks like this, and is about 200 characters for a patch with a dozen
+knobs moved:
+
+```
+https://your-synth.example/#p=osc1Wave:1,mixOsc2:.5,filterCutoff:820,arpOn:1
+```
+
+It is plain text keyed by control name, so it can be edited by hand and read
+at a glance. Three things it deliberately does not carry: your MIDI CC
+assignments, which belong to your controller rather than to the sound; which
+panel sections you have folded, which belongs to your screen; and the notes
+you play. All of those stay on your own device.
+
+Because the patch is in the fragment, after the `#`, it never reaches the
+server. Shared links cost nothing in cache or logs, and loading one does not
+reload the page.
+
 ## Arpeggiator
 
 Turn **ARP → Arp** on and hold a chord. The lamp beside **Start audio** blinks
@@ -309,6 +338,7 @@ src/dsp/        Pure TypeScript signal processing, no browser APIs
 src/worklet/    AudioWorkletProcessor that hosts the synth on the audio thread
 src/midi/       Web MIDI and computer keyboard input
 src/ui/         Knob custom element, panel builder, on-screen keyboard
+src/patch-url.ts  Patch to text and back, for shareable links and presets
 src/presets/    Patch JSON (empty until milestone 4)
 test/           Vitest suite that renders audio offline and checks it
 tools/          Optional Python analysis scripts (see tools/README.md)
