@@ -1,4 +1,4 @@
-import { snapParam, type ParamDef, type ParamId } from "../dsp/params";
+import { choiceLabel, snapParam, type ParamDef, type ParamId } from "../dsp/params";
 
 /**
  * Base for every panel control, whatever it looks like.
@@ -87,7 +87,7 @@ export abstract class ControlElement extends HTMLElement {
 
   /** The label for a discrete value, or the number if the param has no names. */
   protected choiceLabel(value: number): string {
-    return this.def.choices?.[Math.round(value - this.def.min)] ?? String(value);
+    return choiceLabel(this.def, value);
   }
 }
 
