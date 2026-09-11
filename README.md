@@ -214,15 +214,15 @@ up in blue as the pattern plays them.
 
 | Knob | What it does |
 |---|---|
+| ARP → Mode | `up`, `down`, `up-down`, `down-up`, `as played`, `random` |
 | ARP → Arp | Turns the arpeggiator on. Off, notes pass straight through |
+| ARP → Latch | Keeps the pattern running after you let go. The next key you press starts a new chord |
+| ARP → Range | How many octaves the chord is stacked over |
 | ARP → Tempo | 30 to 300 bpm. The LFO and the delay sync to it too |
 | ARP → Rate | Step length, from a whole note down to 1/32, including dotted and triplet divisions |
 | ARP → Swing | Delays every second step. 33% is the classic 2:1 triplet shuffle, 0% is straight |
 | ARP → Gate | How much of each step sounds. Turn it fully up to tie the steps together, which makes the arpeggio glide instead of retriggering |
-| ARP → Mode | `up`, `down`, `up-down`, `down-up`, `as played`, `random` |
-| ARP → Range | How many octaves the chord is stacked over |
 | ARP → Ratchet | Repeats each step 2, 3, or 4 times inside its own slot |
-| ARP → Latch | Keeps the pattern running after you let go. The next key you press starts a new chord |
 
 Switching the arpeggiator off while keys are down hands those notes straight
 back to the voice, so it is safe to flip mid-phrase.

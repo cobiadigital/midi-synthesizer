@@ -94,6 +94,12 @@ export interface ParamDef {
   choices?: string[];
   /** Widget to draw. Defaults to a knob. */
   control?: ParamControl;
+  /**
+   * Start a new row in the section rather than following on from the last
+   * control. For sections big enough that where the rows break is worth
+   * deciding rather than leaving to whatever happens to fit.
+   */
+  newRow?: boolean;
 }
 
 export const WAVEFORMS = ["saw", "square", "triangle"] as const;
@@ -160,9 +166,9 @@ export const PARAMS: readonly ParamDef[] = [
   { id: "lfoTarget", label: "Target", group: "LFO", min: 0, max: LFO_TARGETS.length - 1, default: 0, step: 1, choices: [...LFO_TARGETS], control: "select" },
   { id: "lfoWave", label: "Wave", group: "LFO", min: 0, max: LFO_WAVES.length - 1, default: 0, step: 1, choices: [...LFO_WAVES], control: "select" },
   { id: "lfoDepth", label: "Depth", group: "LFO", min: 0, max: 1, default: 0 },
-  { id: "lfoSync", label: "Sync", group: "LFO", min: 0, max: 1, default: 0, step: 1, choices: OFF_ON, control: "switch" },
   { id: "lfoRate", label: "Rate", group: "LFO", min: 0.05, max: 30, default: 5, taper: "log", unit: "Hz" },
   { id: "lfoDivision", label: "Div", group: "LFO", min: 0, max: DIVISION_LABELS.length - 1, default: DEFAULT_DIVISION, step: 1, choices: DIVISION_LABELS },
+  { id: "lfoSync", label: "Sync", group: "LFO", min: 0, max: 1, default: 0, step: 1, choices: OFF_ON, control: "switch" },
 
   { id: "modWheel", label: "Mod", group: "MOD", min: 0, max: 1, default: 0 },
   { id: "velToCutoff", label: "Vel Cut", group: "MOD", min: 0, max: 1, default: 0 },
@@ -172,15 +178,18 @@ export const PARAMS: readonly ParamDef[] = [
   // its steps, and were split off into a CLOCK group that only ever held them
   // and the tempo. Tempo is shared with LFO and delay sync, but the
   // arpeggiator is what anyone sets it for.
-  { id: "arpOn", label: "Arp", group: "ARP", min: 0, max: 1, default: 0, step: 1, choices: OFF_ON, control: "switch" },
-  { id: "tempo", label: "Tempo", group: "ARP", min: 30, max: 300, default: 120, unit: "bpm" },
   { id: "arpMode", label: "Mode", group: "ARP", min: 0, max: ARP_MODES.length - 1, default: 0, step: 1, choices: [...ARP_MODES], control: "select" },
-  { id: "arpOctaves", label: "Range", group: "ARP", min: 1, max: 4, default: 1, step: 1, choices: ["1", "2", "3", "4"], control: "select" },
+  // What the pattern is, on one row beside the mode column.
+  { id: "arpOn", label: "Arp", group: "ARP", min: 0, max: 1, default: 0, step: 1, choices: OFF_ON, control: "switch" },
+  { id: "arpLatch", label: "Latch", group: "ARP", min: 0, max: 1, default: 0, step: 1, choices: OFF_ON, control: "switch" },
+  { id: "arpOctaves", label: "Range", group: "ARP", min: 1, max: 4, default: 1, step: 1, unit: "oct", control: "stepper" },
+  // How it is clocked, on the rows below. Tempo is shared with LFO and delay
+  // sync, but the arpeggiator is what anyone sets it for.
+  { id: "tempo", label: "Tempo", group: "ARP", min: 30, max: 300, default: 120, unit: "bpm", newRow: true },
   { id: "arpRate", label: "Rate", group: "ARP", min: 0, max: DIVISION_LABELS.length - 1, default: DEFAULT_DIVISION, step: 1, choices: DIVISION_LABELS },
   { id: "arpSwing", label: "Swing", group: "ARP", min: 0, max: 75, default: 0, unit: "%" },
   { id: "arpGate", label: "Gate", group: "ARP", min: 0.05, max: 1, default: 0.5 },
-  { id: "arpRatchet", label: "Ratchet", group: "ARP", min: 1, max: 4, default: 1, step: 1, choices: ["x1", "x2", "x3", "x4"], control: "select" },
-  { id: "arpLatch", label: "Latch", group: "ARP", min: 0, max: 1, default: 0, step: 1, choices: OFF_ON, control: "switch" },
+  { id: "arpRatchet", label: "Ratchet", group: "ARP", min: 1, max: 4, default: 1, step: 1, choices: ["x1", "x2", "x3", "x4"], control: "stepper" },
 
   { id: "delaySync", label: "Sync", group: "DELAY", min: 0, max: 1, default: 0, step: 1, choices: OFF_ON, control: "switch" },
   { id: "delayTime", label: "Time", group: "DELAY", min: 0.02, max: 2, default: 0.35, taper: "log", unit: "s" },

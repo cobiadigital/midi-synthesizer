@@ -169,8 +169,10 @@ body.dragging { cursor: ns-resize; }
   columns: 300px;
   column-gap: 10px;
   /* Four across is the common group width (the mixer, both envelopes), and a
-     column is 313px once padding is off it. 68 is what makes four fit. */
-  --control-width: 68px;
+     column is 291px once its padding is off it: 66 makes four fit with room
+     to spare, and three fit beside a select column. Slack matters here — at
+     68 the arpeggiator's rows missed a third control by one pixel. */
+  --control-width: 66px;
 }
 
 .panel-group {
@@ -237,7 +239,7 @@ body.dragging { cursor: ns-resize; }
 /* Selects of words stand in a column on the left, knobs fill the rest. A
    six-option arpeggiator mode list is then as tall as the two rows of knobs
    beside it rather than a block above them. */
-.group-body { display: flex; align-items: flex-start; gap: 8px; }
+.group-body { display: flex; align-items: flex-start; gap: 6px; }
 
 /* Side by side when a section has two of them (the LFO's target and wave):
    stacking those would make the section as tall as seven buttons while the
@@ -248,6 +250,8 @@ body.dragging { cursor: ns-resize; }
    pushing the panel sideways. Aligned to the bottom so a switch and a knob in
    the same row put their labels on the same line. */
 .knob-row { flex: 1; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 4px; }
+
+.row-break { flex-basis: 100%; height: 0; }
 
 .screen-keyboard {
   width: 100%;

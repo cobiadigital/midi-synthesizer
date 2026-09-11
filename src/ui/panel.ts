@@ -106,6 +106,7 @@ export class Panel {
       // down a line. The knobs keep the width.
       const row = isWordList(def) ? selectColumn(section) : section.querySelector(".knob-row")!;
       if (isWordList(def)) control.classList.add("vertical");
+      else if (def.newRow) row.appendChild(rowBreak());
       control.bind(def, patch[def.id]);
       control.addEventListener("change", (event) => {
         const { id, value } = (event as CustomEvent<{ id: ParamId; value: number }>).detail;
@@ -224,6 +225,16 @@ export class Panel {
     else this.collapsed.delete(group);
     saveCollapsed(this.collapsed);
   }
+}
+
+/**
+ * Forces the controls after it onto a new row. A zero-height flex item taking
+ * the full width is how a wrapping flex row is broken deliberately.
+ */
+function rowBreak(): HTMLElement {
+  const br = document.createElement("span");
+  br.className = "row-break";
+  return br;
 }
 
 /** The column of stacked selects at the left of a section, made on demand. */

@@ -93,9 +93,16 @@ export class SynthSelect extends ControlElement {
         .options { display: flex; flex-wrap: wrap; gap: 2px; justify-content: flex-start; }
         :host { align-items: flex-start; }
         /* Stacked in the column at the left of a section, where the options
-           read as a list and the knobs keep the width. */
+           read as a list and the knobs keep the width. The label goes above
+           rather than below: two columns of different lengths would otherwise
+           hang their labels at two different heights. No minimum width
+           either, since every pixel the column does not need is one the knobs
+           beside it can use to fit another across. */
+        :host(.vertical) { min-width: 0; }
         :host(.vertical) .options { flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
-        :host(.vertical) .option { text-align: left; }
+        :host(.vertical) .option { text-align: left; padding: 6px; }
+        :host(.vertical) .label { order: -1; }
+        :host(.vertical) .state { display: none; }
         .option { font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase;
                   padding: 6px 7px; min-height: 26px; border-radius: 3px;
                   border: 1px solid var(--knob-rim, #555); color: var(--knob-label, #bbb);
@@ -182,12 +189,15 @@ export class SynthStepper extends ControlElement {
     root.innerHTML = `
       <style>
         ${CONTROL_STYLES}
+        /* Sized so the whole stepper lands inside one control width: it has
+           to be the same cell as a knob, or a row of mixed controls stops
+           packing and the section grows a column. */
         .row { display: flex; align-items: center; gap: 2px; }
-        .step { width: 24px; height: 26px; border-radius: 3px; font-size: 14px; line-height: 1;
+        .step { width: 22px; height: 28px; border-radius: 3px; font-size: 14px; line-height: 1;
                 border: 1px solid var(--knob-rim, #555); background: var(--knob-cap, #1c1c1c);
                 color: var(--knob-label, #bbb); }
         .step:disabled { opacity: 0.35; cursor: default; }
-        .readout { font-size: 13px; font-variant-numeric: tabular-nums; min-width: 22px; text-align: center;
+        .readout { font-size: 13px; font-variant-numeric: tabular-nums; min-width: 20px; text-align: center;
                    color: var(--knob-readout, #f5a623); }
         :host(.armed) .row { outline: 2px solid var(--knob-pot, #6ba4ff); outline-offset: 2px; border-radius: 4px; }
         :host(.learn) .step { border-color: var(--knob-pot, #6ba4ff); }

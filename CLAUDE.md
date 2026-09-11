@@ -98,10 +98,21 @@ A section is a column of selects on the left and the knobs on the right.
 `isWordList` decides which selects stand up there: a list of words (waveforms,
 LFO targets, arpeggiator modes) is wider than a section laid out in a row, and
 standing it up lets one sit beside two rows of knobs rather than pushing them
-down a line. A list of numbers (arp range, ratchet) stays among the knobs,
-because stacking four digits would waste the height it takes. Two of them in a
-section stand side by side rather than one above the other, for the same
-reason.
+down a line. Counts (arp range, ratchet, the voice count) are steppers instead,
+sized to sit inside one control width, because a row of mixed widths stops
+packing and costs the section a column. Two select columns in a section stand
+side by side rather than one above the other, and their labels go above the
+buttons so columns of different lengths still line up.
+
+`ParamDef.newRow` starts a row rather than following on from the last control,
+for sections big enough that where the rows break is worth deciding: the
+arpeggiator puts what the pattern is on one row and how it is clocked on the
+rows below.
+
+Control widths are arithmetic, not taste. `--control-width` is 66px because a
+section is 291px wide once its padding is off, which fits four across, and
+213px beside a select column, which fits three. At 68 the arpeggiator's rows
+missed a third control by a single pixel and fell back to two.
 
 `VISIBLE_WHEN` hides controls that are genuinely inert: a synced LFO has no
 free rate, a poly voice never glides. Anything merely unused stays on the
