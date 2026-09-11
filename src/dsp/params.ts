@@ -110,13 +110,6 @@ export const LFO_TARGETS = ["cutoff", "pitch", "shape"] as const;
 const OFF_ON = ["off", "on"];
 
 /**
- * Performance controls rather than patch controls. The panel lifts this group
- * out of the scrolling section list and into the transport strip, so volume,
- * tempo and the arpeggiator stay reachable with every section collapsed.
- */
-export const GLOBAL_GROUP = "GLOBAL";
-
-/**
  * Ordered the way the signal flows, which is the order the panel reads in:
  * what allocates notes, then what makes them (oscillators into the mixer),
  * then what shapes them (filter, then the two envelopes), then what modulates
@@ -125,12 +118,6 @@ export const GLOBAL_GROUP = "GLOBAL";
  * change; only `ParamId` is load-bearing.
  */
 export const PARAMS: readonly ParamDef[] = [
-  { id: "masterVolume", label: "Volume", group: GLOBAL_GROUP, min: 0, max: 1, default: 0.7 },
-  // Shared by the arpeggiator, LFO sync and delay sync, which is why tempo
-  // lives up here rather than inside ARP with the controls named after it.
-  { id: "tempo", label: "Tempo", group: GLOBAL_GROUP, min: 30, max: 300, default: 120, unit: "bpm" },
-  { id: "arpOn", label: "Arp", group: GLOBAL_GROUP, min: 0, max: 1, default: 0, step: 1, choices: OFF_ON, control: "switch" },
-
   // How notes are allocated, before anything that makes a sound.
   { id: "voiceMode", label: "Mode", group: "VOICE", min: 0, max: 1, default: 1, step: 1, choices: [...VOICE_MODES], control: "select" },
   { id: "polyVoices", label: "Voices", group: "VOICE", min: 2, max: 8, default: 8, step: 1, control: "stepper" },
@@ -182,8 +169,11 @@ export const PARAMS: readonly ParamDef[] = [
   { id: "velToAmp", label: "Vel Amp", group: "MOD", min: 0, max: 1, default: 0.7 },
 
   // Everything the arpeggiator owns, in one place. Rate, swing and gate shape
-  // its steps; they were split off into a CLOCK group that only ever held them
-  // and the tempo now in the transport strip.
+  // its steps, and were split off into a CLOCK group that only ever held them
+  // and the tempo. Tempo is shared with LFO and delay sync, but the
+  // arpeggiator is what anyone sets it for.
+  { id: "arpOn", label: "Arp", group: "ARP", min: 0, max: 1, default: 0, step: 1, choices: OFF_ON, control: "switch" },
+  { id: "tempo", label: "Tempo", group: "ARP", min: 30, max: 300, default: 120, unit: "bpm" },
   { id: "arpMode", label: "Mode", group: "ARP", min: 0, max: ARP_MODES.length - 1, default: 0, step: 1, choices: [...ARP_MODES], control: "select" },
   { id: "arpOctaves", label: "Range", group: "ARP", min: 1, max: 4, default: 1, step: 1, choices: ["1", "2", "3", "4"], control: "select" },
   { id: "arpRate", label: "Rate", group: "ARP", min: 0, max: DIVISION_LABELS.length - 1, default: DEFAULT_DIVISION, step: 1, choices: DIVISION_LABELS },
@@ -208,6 +198,10 @@ export const PARAMS: readonly ParamDef[] = [
   { id: "hpfCutoff", label: "HP Cut", group: "OUTPUT", min: 20, max: 2000, default: 20, taper: "log", unit: "Hz" },
   { id: "delayMix", label: "Delay", group: "OUTPUT", min: 0, max: 1, default: 0 },
   { id: "reverbMix", label: "Reverb", group: "OUTPUT", min: 0, max: 1, default: 0 },
+  // The headroom control, and the last thing anyone touches: voices sum
+  // straight, so a big chord with the drive and both sends up is what this is
+  // holding back.
+  { id: "masterVolume", label: "Volume", group: "OUTPUT", min: 0, max: 1, default: 0.7 },
 ];
 
 export const PARAM_INDEX: Readonly<Record<ParamId, number>> = Object.fromEntries(

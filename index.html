@@ -9,19 +9,14 @@
     <title>Poly Synth</title>
   </head>
   <body>
-    <!-- Everything reached for while playing rather than while designing a
-         sound, pinned to the top so it survives a folded panel. -->
-    <div class="topbar">
-      <header>
-        <h1>Poly Synth <small>Subtractive synthesizer in the browser</small></h1>
-        <div class="transport">
-          <span id="beat" class="beat-led" role="img" aria-label="Arpeggiator step indicator"></span>
-          <button id="learn" type="button">MIDI learn</button>
-          <button id="start" type="button">Start audio</button>
-        </div>
-      </header>
-      <div id="globals"></div>
-    </div>
+    <header>
+      <h1>Poly Synth <small>Subtractive synthesizer in the browser</small></h1>
+      <div class="transport">
+        <span id="beat" class="beat-led" role="img" aria-label="Arpeggiator step indicator"></span>
+        <button id="learn" type="button">MIDI learn</button>
+        <button id="start" type="button">Start audio</button>
+      </div>
+    </header>
     <p id="status" class="selectable">Click Start audio, then play a MIDI keyboard, the on-screen keys, or A through K.</p>
     <main id="panel"></main>
     <div id="keyboard"></div>

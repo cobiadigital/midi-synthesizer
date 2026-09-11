@@ -47,35 +47,22 @@ body {
   padding: 24px 16px 48px;
 }
 
-/* Pinned, because what is in it is played rather than set: volume, tempo and
-   the arpeggiator have to stay under the thumb however far down the panel
-   the scroll has gone. */
-.topbar {
+/* Pinned, but only the one row: the beat lamp says whether the arpeggiator is
+   running, and Start and MIDI learn are both modes you need to get back to.
+   Nothing else earns permanent height on a phone. */
+header {
   position: sticky;
   top: 0;
   z-index: 5;
   width: 100%;
   max-width: 960px;
-  background: var(--bg);
-  padding-bottom: 8px;
-  margin-bottom: 12px;
-}
-
-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  background: var(--bg);
   padding: 4px 0 10px;
-}
-
-#globals {
-  display: flex;
-  justify-content: flex-start;
-  background: var(--panel);
-  border: 1px solid var(--panel-edge);
-  border-radius: 8px;
-  padding: 6px 10px;
+  margin-bottom: 10px;
 }
 
 h1 {
@@ -339,10 +326,6 @@ body:not(.audio-on) .screen-keyboard {
 
   header { gap: 8px; padding: 2px 0 8px; }
   #start, #learn { padding: 8px 12px; font-size: 11px; }
-
-  /* A size smaller in the strip: it is pinned, so every pixel it takes is a
-     pixel the panel does not get. */
-  #globals { --knob-size: 40px; --control-width: 60px; padding: 4px 8px; }
 
   #status { font-size: 11px; margin-bottom: 10px; }
 

@@ -71,9 +71,8 @@ it folded. On a phone the panel opens with VCO 1, MIXER and VCF unfolded and
 the rest as a list of headings, and the keys stay pinned to the bottom of the
 screen.
 
-Volume, Tempo and Arp sit in the strip at the top, pinned there because they
-are played rather than set. Controls that cannot do anything in the current
-patch are not shown: Glide is poly's business to ignore, Voices is mono's, and
+Only the title row is pinned: the beat lamp, MIDI learn and Start audio.
+Controls that cannot do anything in the current patch are not shown: Glide is poly's business to ignore, Voices is mono's, and
 a synced Rate is a Div.
 
 ## Oscillators and mixer
@@ -152,6 +151,7 @@ their own sections is what each one sounds like, not how much of it there is.
 | REVERB → Size | Small bright room through to a long hall. The level stays put as you turn it |
 | REVERB → Damp | How fast the tail loses its high end. Up is a soft room, down is tiled |
 | OUTPUT → Reverb | How much reverb to add. At zero the reverb is out of the circuit entirely |
+| OUTPUT → Volume | Headroom for the whole instrument. Voices sum straight, so a big chord with the drive and both sends up is what this is holding back |
 
 Repeats alternate between the channels: first left, then right, then back
 again. Both mixes add to the dry signal rather than fading it away, so turning
@@ -206,13 +206,14 @@ mapped; CC 64 stays the sustain pedal and cannot be reassigned.
 
 ## Arpeggiator
 
-Turn **Arp** on in the top strip and hold a chord. The lamp beside **Start audio** blinks
+Turn **ARP → Arp** on and hold a chord. The lamp beside **Start audio** blinks
 on every step and brightens on each count of four, and the on-screen keys light
 up in blue as the pattern plays them.
 
 | Knob | What it does |
 |---|---|
-| Tempo | 30 to 300 bpm, in the strip at the top. The LFO and the delay sync to it too |
+| ARP → Arp | Turns the arpeggiator on. Off, notes pass straight through |
+| ARP → Tempo | 30 to 300 bpm. The LFO and the delay sync to it too |
 | ARP → Rate | Step length, from a whole note down to 1/32, including dotted and triplet divisions |
 | ARP → Swing | Delays every second step. 33% is the classic 2:1 triplet shuffle, 0% is straight |
 | ARP → Gate | How much of each step sounds. Turn it fully up to tie the steps together, which makes the arpeggio glide instead of retriggering |

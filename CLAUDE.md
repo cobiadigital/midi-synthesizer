@@ -86,11 +86,13 @@ in one place rather than four. Soft takeover needs a visual per widget: the
 knob has a tick on its rim, a switch or stepper a dot beside the label, and a
 select marks the option the dial is pointing at.
 
-The `GLOBAL` group (volume, tempo, arp) is lifted out into the transport strip
-at the top of the page, because those are played rather than set and have to
-survive a folded panel. Sections fold on a tap and what is folded lives in
-localStorage under `midi-panel-collapsed`; first run on a narrow screen opens
-only enough to make a sound, a wide screen opens everything.
+Sections fold on a tap and what is folded lives in localStorage under
+`midi-panel-collapsed`; first run on a narrow screen opens only enough to make
+a sound, a wide screen opens everything. Nothing but the title row is pinned:
+a strip of volume, tempo and arp was tried and taken out again, because none of
+the three is touched often enough to be worth the permanent height on a phone,
+and the panel binds one control per `ParamId`, so pinning the controls that are
+(cutoff, the mod wheel) would take them out of their own sections.
 
 `VISIBLE_WHEN` hides controls that are genuinely inert: a synced LFO has no
 free rate, a poly voice never glides. Anything merely unused stays on the

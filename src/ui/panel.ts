@@ -1,4 +1,4 @@
-import { GLOBAL_GROUP, PARAMS, type ParamDef, type ParamId, type PatchValues } from "../dsp/params";
+import { PARAMS, type ParamDef, type ParamId, type PatchValues } from "../dsp/params";
 import type { ControlElement } from "./control";
 import { SynthSelect, SynthStepper, SynthSwitch } from "./discrete";
 import { SynthKnob } from "./knob";
@@ -12,8 +12,6 @@ export interface PanelHandlers {
 export interface PanelOptions {
   /** Where the collapsible sections go. */
   container: HTMLElement;
-  /** The transport strip, for the handful of controls played rather than set. */
-  globals: HTMLElement;
   patch: PatchValues;
   handlers: PanelHandlers;
 }
@@ -83,10 +81,8 @@ function createControl(def: ParamDef): ControlElement {
  * order the registry lists them, which is the order the signal flows.
  *
  * Sections collapse, and which are folded is remembered. That is what makes
- * the thing usable on a phone: fourteen headings and one open section instead
+ * the thing usable on a phone: thirteen headings and one open section instead
  * of two and a half thousand pixels of knobs between the player and the keys.
- * The `GLOBAL` group is lifted out into the transport strip, where volume,
- * tempo and the arpeggiator stay reachable whatever is folded.
  *
  * Returns a handle for pushing preset values back into the controls, and for
  * the MIDI feedback each one can show: its assignment and where its dial is.
@@ -98,13 +94,12 @@ export class Panel {
   private patch: PatchValues;
   private armed: ParamId | null = null;
 
-  constructor({ container, globals, patch, handlers }: PanelOptions) {
+  constructor({ container, patch, handlers }: PanelOptions) {
     this.patch = patch;
     this.collapsed = loadCollapsed();
 
     for (const def of PARAMS) {
-      const row =
-        def.group === GLOBAL_GROUP ? globalRow(globals) : this.section(container, def.group).querySelector(".knob-row")!;
+      const row = this.section(container, def.group).querySelector(".knob-row")!;
       const control = createControl(def);
       control.bind(def, patch[def.id]);
       control.addEventListener("change", (event) => {
@@ -221,16 +216,6 @@ export class Panel {
     else this.collapsed.delete(group);
     saveCollapsed(this.collapsed);
   }
-}
-
-function globalRow(globals: HTMLElement): HTMLElement {
-  let row = globals.querySelector(".knob-row");
-  if (!row) {
-    row = document.createElement("div");
-    row.className = "knob-row";
-    globals.appendChild(row);
-  }
-  return row as HTMLElement;
 }
 
 /**

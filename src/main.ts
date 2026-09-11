@@ -29,13 +29,11 @@ const startButton = document.getElementById("start") as HTMLButtonElement;
 const learnButton = document.getElementById("learn") as HTMLButtonElement;
 const status = document.getElementById("status") as HTMLElement;
 const panelRoot = document.getElementById("panel") as HTMLElement;
-const globalsRoot = document.getElementById("globals") as HTMLElement;
 const keyboardRoot = document.getElementById("keyboard") as HTMLElement;
 const beatLed = document.getElementById("beat") as HTMLElement;
 
 const panel = new Panel({
   container: panelRoot,
-  globals: globalsRoot,
   patch,
   handlers: {
     change: (id, value) => {
