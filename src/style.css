@@ -47,14 +47,22 @@ body {
   padding: 24px 16px 48px;
 }
 
+/* Pinned, but only the one row: the beat lamp says whether the arpeggiator is
+   running, and Start and MIDI learn are both modes you need to get back to.
+   Nothing else earns permanent height on a phone. */
 header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
   width: 100%;
   max-width: 960px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 20px;
+  background: var(--bg);
+  padding: 4px 0 10px;
+  margin-bottom: 10px;
 }
 
 h1 {
@@ -150,36 +158,100 @@ h1 small {
    pointer anywhere on the page, not just over the knob. */
 body.dragging { cursor: ns-resize; }
 
+/* Section cards in columns rather than one flowing row of knobs: groups used
+   to break wherever they happened to run out of width, which is most of why
+   the panel read as a wall. Multi-column rather than grid because the cards
+   are all different heights and grid would leave a hole under every short
+   one; the cards pack instead, and fold to a single column on a phone. */
 #panel {
   width: 100%;
   max-width: 960px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  background: var(--panel);
-  border: 1px solid var(--panel-edge);
-  border-radius: 8px;
-  padding: 16px;
+  columns: 300px;
+  column-gap: 10px;
+  /* Four across is the common group width (the mixer, both envelopes), and a
+     column is 291px once its padding is off it: 66 makes four fit with room
+     to spare, and three fit beside a select column. Slack matters here — at
+     68 the arpeggiator's rows missed a third control by one pixel. */
+  --control-width: 66px;
 }
 
 .panel-group {
-  border-right: 1px solid var(--panel-edge);
-  padding-right: 12px;
+  break-inside: avoid;
+  margin-bottom: 10px;
+  background: var(--panel);
+  border: 1px solid var(--panel-edge);
+  border-radius: 8px;
+  padding: 4px 10px 10px;
 }
 
-.panel-group:last-child { border-right: 0; }
+.panel-group h2 { margin: 0; font-weight: 600; }
 
-.panel-group h2 {
+/* The whole heading is the fold control, so it is a button the width of the
+   card rather than a chevron to aim at. */
+.group-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: 0;
+  padding: 8px 0;
+  font: inherit;
   font-size: 11px;
-  letter-spacing: 0.16em;
-  color: var(--muted);
-  margin: 0 0 8px;
   font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer;
 }
 
-/* Wraps so a wide group (the six VCF knobs) folds onto a second line on a
-   phone instead of pushing the panel sideways. */
-.knob-row { display: flex; flex-wrap: wrap; gap: 4px; }
+.group-chevron {
+  margin-left: auto;
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid var(--muted);
+  border-bottom: 1.5px solid var(--muted);
+  transform: rotate(45deg) translate(-2px, -2px);
+  transition: transform 120ms ease-out;
+}
+
+/* A folded card is a heading and nothing else, so it gives its padding back:
+   ten of them stacked is the difference between a list and another wall. */
+.panel-group.collapsed { padding-bottom: 0; }
+
+.panel-group.collapsed .group-chevron { transform: rotate(-45deg) translate(-1px, 1px); }
+.panel-group.collapsed .group-body { display: none; }
+
+/* Lit when the section is doing something: the delay is up, the arpeggiator
+   is running. Folded away, this is the only way to tell. */
+.group-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.panel-group.active .group-dot {
+  background: var(--accent);
+  box-shadow: 0 0 6px rgba(245, 166, 35, 0.6);
+}
+
+/* Selects of words stand in a column on the left, knobs fill the rest. A
+   six-option arpeggiator mode list is then as tall as the two rows of knobs
+   beside it rather than a block above them. */
+.group-body { display: flex; align-items: flex-start; gap: 6px; }
+
+/* Side by side when a section has two of them (the LFO's target and wave):
+   stacking those would make the section as tall as seven buttons while the
+   knobs beside it used one row. */
+.group-selects { display: flex; align-items: flex-start; gap: 8px; }
+
+/* Wraps so a wide group folds onto a second line on a phone instead of
+   pushing the panel sideways. Aligned to the bottom so a switch and a knob in
+   the same row put their labels on the same line. */
+.knob-row { flex: 1; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 4px; }
+
+.row-break { flex-basis: 100%; height: 0; }
 
 .screen-keyboard {
   width: 100%;
@@ -251,4 +323,28 @@ body.dragging { cursor: ns-resize; }
 body:not(.audio-on) #panel,
 body:not(.audio-on) .screen-keyboard {
   opacity: 0.5;
+}
+
+/* Phone layout. The panel is a list of section headings with one or two open,
+   the strip at the top and the keys at the bottom are both pinned, and what
+   scrolls between them is only the section being edited. */
+@media (max-width: 760px) {
+  body { padding: 12px 10px 0; }
+
+  h1 { font-size: 15px; letter-spacing: 0.12em; }
+  h1 small { display: none; }
+
+  header { gap: 8px; padding: 2px 0 8px; }
+  #start, #learn { padding: 8px 12px; font-size: 11px; }
+
+  #status { font-size: 11px; margin-bottom: 10px; }
+
+  .screen-keyboard {
+    position: sticky;
+    bottom: 0;
+    z-index: 4;
+    height: 112px;
+    margin-top: 12px;
+    border-radius: 6px 6px 0 0;
+  }
 }

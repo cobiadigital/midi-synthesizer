@@ -32,15 +32,19 @@ const panelRoot = document.getElementById("panel") as HTMLElement;
 const keyboardRoot = document.getElementById("keyboard") as HTMLElement;
 const beatLed = document.getElementById("beat") as HTMLElement;
 
-const panel = new Panel(panelRoot, patch, {
-  change: (id, value) => {
-    setParam(id, value);
-    // Moved by hand, so its dial has to pick the knob up again rather than
-    // yanking the value back where the pot happens to be sitting.
-    ccMap.release(id);
-    panel.setPot(id, null);
+const panel = new Panel({
+  container: panelRoot,
+  patch,
+  handlers: {
+    change: (id, value) => {
+      setParam(id, value);
+      // Moved by hand, so its dial has to pick the knob up again rather than
+      // yanking the value back where the pot happens to be sitting.
+      ccMap.release(id);
+      panel.setPot(id, null);
+    },
+    learn: (id) => armFor(id),
   },
-  learn: (id) => armFor(id),
 });
 
 function setParam(id: ParamId, value: number): void {

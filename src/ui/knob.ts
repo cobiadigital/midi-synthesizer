@@ -1,4 +1,5 @@
-import { paramFromNorm, paramToNorm, snapParam, type ParamDef } from "../dsp/params";
+import { paramFromNorm, paramToNorm } from "../dsp/params";
+import { CONTROL_STYLES, ControlElement } from "./control";
 
 /**
  * `<synth-knob>`: a rotary control bound to one ParamDef.
@@ -12,11 +13,9 @@ import { paramFromNorm, paramToNorm, snapParam, type ParamDef } from "../dsp/par
  * mode, the CC number it answers to. In learn mode a press selects the knob
  * instead of dragging it, and emits `learn` rather than `change`.
  */
-export class SynthKnob extends HTMLElement {
+export class SynthKnob extends ControlElement {
   static readonly tag = "synth-knob";
 
-  private def!: ParamDef;
-  private _value = 0;
   private dragStartY = 0;
   private dragStartNorm = 0;
   private lastTapAt = 0;
@@ -25,32 +24,26 @@ export class SynthKnob extends HTMLElement {
   private readonly arc: SVGPathElement;
   private readonly readout: HTMLSpanElement;
   private readonly pot: SVGLineElement;
-  private readonly midi: HTMLSpanElement;
-  private learning = false;
 
   constructor() {
     super();
     const root = this.attachShadow({ mode: "open" });
     root.innerHTML = `
       <style>
-        :host { display: inline-flex; flex-direction: column; align-items: center; gap: 4px;
-                width: 72px; user-select: none; touch-action: none; cursor: ns-resize; font: inherit; }
-        svg { width: 52px; height: 52px; }
+        ${CONTROL_STYLES}
+        :host { cursor: ns-resize; }
+        svg { width: var(--knob-size, 52px); height: var(--knob-size, 52px); }
         .track { fill: none; stroke: var(--knob-track, #333); stroke-width: 4; stroke-linecap: round; }
         .arc { fill: none; stroke: var(--knob-arc, #f5a623); stroke-width: 4; stroke-linecap: round; }
         .cap { fill: var(--knob-cap, #1c1c1c); stroke: var(--knob-rim, #555); stroke-width: 1; }
         .indicator { stroke: var(--knob-indicator, #eee); stroke-width: 3; stroke-linecap: round; }
-        .label { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--knob-label, #bbb); }
         .readout { font-size: 11px; font-variant-numeric: tabular-nums; color: var(--knob-readout, #f5a623); min-height: 1.2em; }
         /* Where the physical dial is sitting, while it waits to reach the
            value and take over. Hidden the rest of the time. */
         .pot { stroke: var(--knob-pot, #6ba4ff); stroke-width: 2.5; stroke-linecap: round; }
         .pot[hidden] { display: none; }
-        :host(.learn) { cursor: pointer; }
         :host(.learn) .cap { stroke: var(--knob-pot, #6ba4ff); }
         :host(.armed) .cap { fill: #21323f; stroke: var(--knob-pot, #6ba4ff); stroke-width: 2; }
-        .midi { font-size: 10px; letter-spacing: 0.04em; color: var(--knob-pot, #6ba4ff); min-height: 1.1em; }
-        .midi[hidden] { display: none; }
       </style>
       <svg viewBox="0 0 52 52" aria-hidden="true">
         <path class="track" d=""></path>
@@ -67,7 +60,6 @@ export class SynthKnob extends HTMLElement {
     this.arc = root.querySelector(".arc") as SVGPathElement;
     this.readout = root.querySelector(".readout") as HTMLSpanElement;
     this.pot = root.querySelector(".pot") as SVGLineElement;
-    this.midi = root.querySelector(".midi") as HTMLSpanElement;
     (root.querySelector(".track") as SVGPathElement).setAttribute("d", describeArc(0, 1));
 
     this.addEventListener("pointerdown", this.onPointerDown);
@@ -91,26 +83,13 @@ export class SynthKnob extends HTMLElement {
     this.addEventListener("touchstart", (event) => event.preventDefault(), { passive: false });
   }
 
-  bind(def: ParamDef, value: number): void {
-    this.def = def;
-    (this.shadowRoot!.querySelector(".label") as HTMLSpanElement).textContent = def.label;
+  protected onBind(): void {
+    (this.shadowRoot!.querySelector(".label") as HTMLSpanElement).textContent = this.def.label;
     this.setAttribute("role", "slider");
-    this.setAttribute("aria-label", def.label);
-    this.setAttribute("aria-valuemin", String(def.min));
-    this.setAttribute("aria-valuemax", String(def.max));
+    this.setAttribute("aria-label", this.def.label);
+    this.setAttribute("aria-valuemin", String(this.def.min));
+    this.setAttribute("aria-valuemax", String(this.def.max));
     this.tabIndex = 0;
-    this.value = value;
-  }
-
-  get value(): number {
-    return this._value;
-  }
-
-  /** Set the displayed value without emitting a change event. */
-  set value(v: number) {
-    this._value = snapParam(this.def, v);
-    this.setAttribute("aria-valuenow", String(this._value));
-    this.draw();
   }
 
   /**
@@ -128,35 +107,8 @@ export class SynthKnob extends HTMLElement {
     this.pot.setAttribute("transform", `rotate(${-135 + Math.min(1, Math.max(0, norm)) * 270} 26 26)`);
   }
 
-  /** The CC number this knob answers to, shown while learn mode is on. */
-  setMidiLabel(text: string | null): void {
-    this.midi.textContent = text ?? "";
-    this.midi.hidden = text === null;
-  }
-
-  /** In learn mode a press selects the knob rather than dragging it. */
-  set learnMode(on: boolean) {
-    this.learning = on;
-    this.classList.toggle("learn", on);
-    if (!on) this.armed = false;
-  }
-
-  set armed(on: boolean) {
-    this.classList.toggle("armed", on);
-  }
-
-  private commit(v: number): void {
-    const snapped = snapParam(this.def, v);
-    if (snapped === this._value) return;
-    this.value = snapped;
-    this.dispatchEvent(new CustomEvent("change", { detail: { id: this.def.id, value: snapped }, bubbles: true }));
-  }
-
   private readonly onPointerDown = (event: PointerEvent): void => {
-    if (this.learning) {
-      this.dispatchEvent(new CustomEvent("learn", { detail: { id: this.def.id }, bubbles: true }));
-      return;
-    }
+    if (this.claimForLearn()) return;
     // Touch gets its own double-tap reset because cancelling touchstart above
     // stops Safari from synthesizing the dblclick the mouse path relies on.
     if (event.pointerType !== "mouse") {
@@ -196,18 +148,18 @@ export class SynthKnob extends HTMLElement {
     this.commit(paramFromNorm(this.def, paramToNorm(this.def, this._value) + direction * stepNorm));
   };
 
-  private draw(): void {
+  protected draw(): void {
     const norm = paramToNorm(this.def, this._value);
     const angle = -135 + norm * 270;
     this.indicator.setAttribute("transform", `rotate(${angle} 26 26)`);
     this.arc.setAttribute("d", describeArc(0, norm));
     this.readout.textContent = this.format();
+    this.setAttribute("aria-valuenow", String(this._value));
   }
 
   private format(): string {
-    const { choices, min, unit, step } = this.def;
-    if (choices) return choices[Math.round(this._value - min)] ?? String(this._value);
-    if (step) return String(this._value);
+    const { choices, unit, step } = this.def;
+    if (choices || step) return this.choiceLabel(this._value);
     const v = this._value;
     const text = v >= 100 ? v.toFixed(0) : v >= 10 ? v.toFixed(1) : v.toFixed(2);
     return unit ? `${text} ${unit}` : text;
