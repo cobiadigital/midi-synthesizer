@@ -94,6 +94,15 @@ the three is touched often enough to be worth the permanent height on a phone,
 and the panel binds one control per `ParamId`, so pinning the controls that are
 (cutoff, the mod wheel) would take them out of their own sections.
 
+A section is a column of selects on the left and the knobs on the right.
+`isWordList` decides which selects stand up there: a list of words (waveforms,
+LFO targets, arpeggiator modes) is wider than a section laid out in a row, and
+standing it up lets one sit beside two rows of knobs rather than pushing them
+down a line. A list of numbers (arp range, ratchet) stays among the knobs,
+because stacking four digits would waste the height it takes. Two of them in a
+section stand side by side rather than one above the other, for the same
+reason.
+
 `VISIBLE_WHEN` hides controls that are genuinely inert: a synced LFO has no
 free rate, a poly voice never glides. Anything merely unused stays on the
 panel, because hiding on a value change moves the rest of a section under a

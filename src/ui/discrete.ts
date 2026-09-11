@@ -1,4 +1,4 @@
-import { paramFromNorm } from "../dsp/params";
+import { paramFromNorm, type ParamDef } from "../dsp/params";
 import { CONTROL_STYLES, ControlElement } from "./control";
 
 /**
@@ -92,6 +92,10 @@ export class SynthSelect extends ControlElement {
            do rather than floating in the middle of the card. */
         .options { display: flex; flex-wrap: wrap; gap: 2px; justify-content: flex-start; }
         :host { align-items: flex-start; }
+        /* Stacked in the column at the left of a section, where the options
+           read as a list and the knobs keep the width. */
+        :host(.vertical) .options { flex-direction: column; flex-wrap: nowrap; align-items: stretch; }
+        :host(.vertical) .option { text-align: left; }
         .option { font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase;
                   padding: 6px 7px; min-height: 26px; border-radius: 3px;
                   border: 1px solid var(--knob-rim, #555); color: var(--knob-label, #bbb);
@@ -132,11 +136,6 @@ export class SynthSelect extends ControlElement {
       this.options.appendChild(button);
       this.buttons.push(button);
     }
-    // A row of words (waveforms, arpeggiator modes) takes a line of its own
-    // rather than wrapping raggedly around the knobs beside it. A row of
-    // numbers is short enough to sit among them.
-    const characters = this.buttons.reduce((sum, b) => sum + (b.textContent?.length ?? 0), 0);
-    this.classList.toggle("wide", characters > 12);
   }
 
   protected draw(): void {
@@ -151,6 +150,17 @@ export class SynthSelect extends ControlElement {
       norm === null ? -1 : Math.round((paramFromNorm(this.def, norm) - this.def.min) / (this.def.step ?? 1));
     this.buttons.forEach((button, i) => button.classList.toggle("pot", i === index));
   }
+}
+
+/**
+ * A select whose options are words (waveforms, LFO targets, arpeggiator modes)
+ * rather than numbers. Those are what the panel stands up in a column beside
+ * the knobs: a row of them is wider than a section, and stacking a row of
+ * numbers would waste the height.
+ */
+export function isWordList(def: ParamDef): boolean {
+  if (def.control !== "select" || !def.choices) return false;
+  return def.choices.reduce((sum, choice) => sum + choice.length, 0) > 12;
 }
 
 /**

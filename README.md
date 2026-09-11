@@ -59,8 +59,10 @@ start audio without a click, so the button is not optional.
 
 Knobs: drag up and down, hold Shift for fine control, double-click to reset,
 scroll wheel for stepped changes. Anything with two states is a switch and
-anything with a short list of choices is a row of buttons, so both are one tap
-rather than a drag.
+anything with a list of choices is a bank of buttons, so both are one tap
+rather than a drag. Waveforms, the LFO target and the arpeggiator mode stand in
+a column down the left of their section, the way a switch bank does on a panel;
+the knobs take the rest of the width.
 
 The panel is a stack of sections laid out the way the signal flows: how notes
 are allocated, then the oscillators and mixer, the filter and its envelope, the

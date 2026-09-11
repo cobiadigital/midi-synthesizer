@@ -218,7 +218,7 @@ body.dragging { cursor: ns-resize; }
 .panel-group.collapsed { padding-bottom: 0; }
 
 .panel-group.collapsed .group-chevron { transform: rotate(-45deg) translate(-1px, 1px); }
-.panel-group.collapsed .knob-row { display: none; }
+.panel-group.collapsed .group-body { display: none; }
 
 /* Lit when the section is doing something: the delay is up, the arpeggiator
    is running. Folded away, this is the only way to tell. */
@@ -234,14 +234,20 @@ body.dragging { cursor: ns-resize; }
   box-shadow: 0 0 6px rgba(245, 166, 35, 0.6);
 }
 
+/* Selects of words stand in a column on the left, knobs fill the rest. A
+   six-option arpeggiator mode list is then as tall as the two rows of knobs
+   beside it rather than a block above them. */
+.group-body { display: flex; align-items: flex-start; gap: 8px; }
+
+/* Side by side when a section has two of them (the LFO's target and wave):
+   stacking those would make the section as tall as seven buttons while the
+   knobs beside it used one row. */
+.group-selects { display: flex; align-items: flex-start; gap: 8px; }
+
 /* Wraps so a wide group folds onto a second line on a phone instead of
    pushing the panel sideways. Aligned to the bottom so a switch and a knob in
    the same row put their labels on the same line. */
-.knob-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 4px; }
-
-/* A select with more than a handful of options gets its own line, so the
-   knobs beside it are not pushed around by a wrapping segmented row. */
-.knob-row synth-select.wide { flex-basis: 100%; }
+.knob-row { flex: 1; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 4px; }
 
 .screen-keyboard {
   width: 100%;

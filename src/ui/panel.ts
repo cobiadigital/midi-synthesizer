@@ -1,6 +1,6 @@
 import { PARAMS, type ParamDef, type ParamId, type PatchValues } from "../dsp/params";
 import type { ControlElement } from "./control";
-import { SynthSelect, SynthStepper, SynthSwitch } from "./discrete";
+import { isWordList, SynthSelect, SynthStepper, SynthSwitch } from "./discrete";
 import { SynthKnob } from "./knob";
 
 export interface PanelHandlers {
@@ -99,8 +99,13 @@ export class Panel {
     this.collapsed = loadCollapsed();
 
     for (const def of PARAMS) {
-      const row = this.section(container, def.group).querySelector(".knob-row")!;
+      const section = this.section(container, def.group);
       const control = createControl(def);
+      // Lists of words stand up in a column at the left of the section, where
+      // one of them can sit beside two rows of knobs rather than pushing them
+      // down a line. The knobs keep the width.
+      const row = isWordList(def) ? selectColumn(section) : section.querySelector(".knob-row")!;
+      if (isWordList(def)) control.classList.add("vertical");
       control.bind(def, patch[def.id]);
       control.addEventListener("change", (event) => {
         const { id, value } = (event as CustomEvent<{ id: ParamId; value: number }>).detail;
@@ -192,9 +197,12 @@ export class Panel {
     toggle.addEventListener("click", () => this.setCollapsed(group, !section.classList.contains("collapsed")));
     heading.appendChild(toggle);
     section.appendChild(heading);
+    const body = document.createElement("div");
+    body.className = "group-body";
     const row = document.createElement("div");
     row.className = "knob-row";
-    section.appendChild(row);
+    body.appendChild(row);
+    section.appendChild(body);
     container.appendChild(section);
     this.sections.set(group, section);
 
@@ -216,6 +224,18 @@ export class Panel {
     else this.collapsed.delete(group);
     saveCollapsed(this.collapsed);
   }
+}
+
+/** The column of stacked selects at the left of a section, made on demand. */
+function selectColumn(section: HTMLElement): HTMLElement {
+  const body = section.querySelector(".group-body") as HTMLElement;
+  let column = body.querySelector(".group-selects");
+  if (!column) {
+    column = document.createElement("div");
+    column.className = "group-selects";
+    body.prepend(column);
+  }
+  return column as HTMLElement;
 }
 
 /**
