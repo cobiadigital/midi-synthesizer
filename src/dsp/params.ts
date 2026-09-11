@@ -192,19 +192,22 @@ export const PARAMS: readonly ParamDef[] = [
   { id: "arpRatchet", label: "Ratchet", group: "ARP", min: 1, max: 4, default: 1, step: 1, choices: ["x1", "x2", "x3", "x4"], control: "select" },
   { id: "arpLatch", label: "Latch", group: "ARP", min: 0, max: 1, default: 0, step: 1, choices: OFF_ON, control: "switch" },
 
-  // The master high-pass is the first thing in `Bus`, ahead of both effects,
-  // and has nothing to do with the per-voice VCF it used to sit beside.
-  { id: "hpfCutoff", label: "HP Cut", group: "BUS", min: 20, max: 2000, default: 20, taper: "log", unit: "Hz" },
-
   { id: "delaySync", label: "Sync", group: "DELAY", min: 0, max: 1, default: 0, step: 1, choices: OFF_ON, control: "switch" },
   { id: "delayTime", label: "Time", group: "DELAY", min: 0.02, max: 2, default: 0.35, taper: "log", unit: "s" },
   { id: "delayDivision", label: "Div", group: "DELAY", min: 0, max: DIVISION_LABELS.length - 1, default: DEFAULT_DIVISION, step: 1, choices: DIVISION_LABELS },
   { id: "delayFeedback", label: "Feedback", group: "DELAY", min: 0, max: 0.95, default: 0.35 },
-  { id: "delayMix", label: "Mix", group: "DELAY", min: 0, max: 1, default: 0 },
 
   { id: "reverbSize", label: "Size", group: "REVERB", min: 0, max: 1, default: 0.6 },
   { id: "reverbDamp", label: "Damp", group: "REVERB", min: 0, max: 1, default: 0.4 },
-  { id: "reverbMix", label: "Mix", group: "REVERB", min: 0, max: 1, default: 0 },
+
+  // The master stage. Both effects are sends added to the dry signal rather
+  // than crossfades, so their mixes are send levels and belong together at the
+  // output, where they can be reached with the effect sections folded away.
+  // The high-pass is the one output control that is not a send; it runs at the
+  // head of `Bus`, ahead of both effects, rather than here at the end.
+  { id: "hpfCutoff", label: "HP Cut", group: "OUTPUT", min: 20, max: 2000, default: 20, taper: "log", unit: "Hz" },
+  { id: "delayMix", label: "Delay", group: "OUTPUT", min: 0, max: 1, default: 0 },
+  { id: "reverbMix", label: "Reverb", group: "OUTPUT", min: 0, max: 1, default: 0 },
 ];
 
 export const PARAM_INDEX: Readonly<Record<ParamId, number>> = Object.fromEntries(

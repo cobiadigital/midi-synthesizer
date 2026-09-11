@@ -53,9 +53,12 @@ const GROUP_ACTIVE: Record<string, (p: PatchValues) => boolean> = {
   "VCO 2": (p) => p.mixOsc2 > 0,
   LFO: (p) => p.lfoDepth > 0,
   ARP: (p) => p.arpOn >= 0.5,
-  BUS: (p) => p.hpfCutoff > 20,
+  // The two sends live in OUTPUT, so these dots are what say an effect is up
+  // while its own section is folded. OUTPUT's own dot is the high-pass, the
+  // one control in there that is not a send.
   DELAY: (p) => p.delayMix > 0,
   REVERB: (p) => p.reverbMix > 0,
+  OUTPUT: (p) => p.hpfCutoff > 20,
 };
 
 /**

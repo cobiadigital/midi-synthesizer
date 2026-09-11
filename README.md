@@ -129,7 +129,7 @@ the oscillator and before the amplifier.
 | VCF → Drive | Pushes the filter's saturator. Small signals stay at the same level; loud ones compress and grow harmonics |
 | VCF → Key | How much the cutoff follows the keyboard, so high notes stay as bright as low ones. Fully up tracks the pitch exactly |
 | VCF → EG Int | How far the filter envelope moves the cutoff, up to six octaves either way. Negative closes the filter as the envelope opens |
-| BUS → HP Cut | Two-pole high-pass on the whole instrument, ahead of the effects. Fully down it is out of the circuit |
+| OUTPUT → HP Cut | Two-pole high-pass on the whole instrument, ahead of the effects. Fully down it is out of the circuit |
 | VCF EG | A second ADSR wired only to the cutoff. Short decay with EG Int up is the classic plucked bass |
 
 ## Effects
@@ -137,16 +137,21 @@ the oscillator and before the amplifier.
 Voices sum to mono and the effects are where the sound becomes stereo, so both
 are worth hearing on headphones.
 
+Both effects are sends rather than wet/dry blends, so how much of each you hear
+is a send level, and both live in OUTPUT with the master high-pass. That means
+you can fold DELAY and REVERB away and still dial the effects in: what is in
+their own sections is what each one sounds like, not how much of it there is.
+
 | Knob | What it does |
 |---|---|
 | DELAY → Time | 20 ms to 2 s. Turning it while repeats are ringing glides their pitch, like a tape delay |
 | DELAY → Sync | Take the time from the tempo instead of the Time knob |
 | DELAY → Div | Which division to sync to, from a whole note to 1/32, dotted and triplet included. Set to the same division as ARP → Rate and the delay lands on the arpeggiator's steps |
 | DELAY → Feedback | How many repeats. Each crossing loses a little top end, so they darken as they go |
-| DELAY → Mix | How much delay to add. At zero the delay is out of the circuit entirely |
+| OUTPUT → Delay | How much delay to add. At zero the delay is out of the circuit entirely |
 | REVERB → Size | Small bright room through to a long hall. The level stays put as you turn it |
 | REVERB → Damp | How fast the tail loses its high end. Up is a soft room, down is tiled |
-| REVERB → Mix | How much reverb to add. At zero the reverb is out of the circuit entirely |
+| OUTPUT → Reverb | How much reverb to add. At zero the reverb is out of the circuit entirely |
 
 Repeats alternate between the channels: first left, then right, then back
 again. Both mixes add to the dry signal rather than fading it away, so turning

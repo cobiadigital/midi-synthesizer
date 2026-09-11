@@ -69,8 +69,14 @@ including the log tapers, and there is one place to change if a taper changes.
 `src/ui/panel.ts` builds the whole panel from `PARAMS`, one section per
 `group`, in the order the registry lists them, which is the order the signal
 flows: voice allocation, oscillators, mixer, filter, filter envelope, amp
-envelope, modulation, arpeggiator, effects bus. No layout is written out by
-hand anywhere.
+envelope, modulation, arpeggiator, the two effects, and the output stage. No
+layout is written out by hand anywhere.
+
+`OUTPUT` is the one group that is not simply "the params of one module": it
+holds the master high-pass and both effect send levels, because the effects are
+sends rather than crossfades and the send is the control you reach for. Leaving
+each mix in its own section meant folding DELAY away also folded away the only
+control that turns the delay up.
 
 `ControlElement` in `src/ui/control.ts` is what the widgets share: value
 snapping, the `change` and `learn` events, the armed state and the CC label.
