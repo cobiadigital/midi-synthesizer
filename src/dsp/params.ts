@@ -132,7 +132,7 @@ export const PARAMS: readonly ParamDef[] = [
   { id: "arpOn", label: "Arp", group: GLOBAL_GROUP, min: 0, max: 1, default: 0, step: 1, choices: OFF_ON, control: "switch" },
 
   // How notes are allocated, before anything that makes a sound.
-  { id: "voiceMode", label: "Mode", group: "VOICE", min: 0, max: 1, default: 1, step: 1, choices: [...VOICE_MODES], control: "switch" },
+  { id: "voiceMode", label: "Mode", group: "VOICE", min: 0, max: 1, default: 1, step: 1, choices: [...VOICE_MODES], control: "select" },
   { id: "polyVoices", label: "Voices", group: "VOICE", min: 2, max: 8, default: 8, step: 1, control: "stepper" },
   { id: "glide", label: "Glide", group: "VOICE", min: 0, max: 2, default: 0, taper: "log", unit: "s" },
 

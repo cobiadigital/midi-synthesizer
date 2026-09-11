@@ -1,5 +1,24 @@
-import { PARAMS, type ParamId, type PatchValues } from "../dsp/params";
+import { PARAMS, type ParamDef, type ParamId, type PatchValues } from "../dsp/params";
+import type { ControlElement } from "./control";
+import { SynthSelect, SynthStepper, SynthSwitch } from "./discrete";
 import { SynthKnob } from "./knob";
+
+/**
+ * The widget a param asks for. Knob unless it says otherwise, which keeps the
+ * registry in charge of the panel: a control changes shape by gaining one
+ * field in `PARAMS`, not by special-casing anything here.
+ */
+function createControl(def: ParamDef): ControlElement {
+  const tag =
+    def.control === "switch"
+      ? SynthSwitch.tag
+      : def.control === "select"
+        ? SynthSelect.tag
+        : def.control === "stepper"
+          ? SynthStepper.tag
+          : SynthKnob.tag;
+  return document.createElement(tag) as ControlElement;
+}
 
 export interface PanelHandlers {
   change(id: ParamId, value: number): void;
@@ -8,12 +27,12 @@ export interface PanelHandlers {
 }
 
 /**
- * Builds the knob panel from the PARAMS registry, one section per `group`.
+ * Builds the panel from the PARAMS registry, one section per `group`.
  * Returns a handle for pushing preset values back into the knobs, and for the
  * MIDI feedback each knob can show: its assignment and where its dial is.
  */
 export class Panel {
-  private readonly knobs = new Map<ParamId, SynthKnob>();
+  private readonly knobs = new Map<ParamId, ControlElement>();
   private armed: ParamId | null = null;
 
   constructor(container: HTMLElement, patch: PatchValues, handlers: PanelHandlers) {
@@ -32,7 +51,7 @@ export class Panel {
         container.appendChild(section);
         groups.set(def.group, section);
       }
-      const knob = document.createElement(SynthKnob.tag) as SynthKnob;
+      const knob = createControl(def);
       knob.bind(def, patch[def.id]);
       knob.addEventListener("change", (event) => {
         const { id, value } = (event as CustomEvent<{ id: ParamId; value: number }>).detail;
