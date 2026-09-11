@@ -32,7 +32,7 @@ export class SynthKnob extends ControlElement {
       <style>
         ${CONTROL_STYLES}
         :host { cursor: ns-resize; }
-        svg { width: 52px; height: 52px; }
+        svg { width: var(--knob-size, 52px); height: var(--knob-size, 52px); }
         .track { fill: none; stroke: var(--knob-track, #333); stroke-width: 4; stroke-linecap: round; }
         .arc { fill: none; stroke: var(--knob-arc, #f5a623); stroke-width: 4; stroke-linecap: round; }
         .cap { fill: var(--knob-cap, #1c1c1c); stroke: var(--knob-rim, #555); stroke-width: 1; }

@@ -50,12 +50,47 @@ worklet stores values in a `ParamStore` indexed by it, and presets are
 3. Add a test if it changes the sound in a measurable way.
 
 Time and frequency params use `taper: "log"` so knobs feel right. Discrete
-params use `step` and `choices`.
+params use `step` and `choices`, and `control` names the widget: `switch` for
+two states, `select` for a short list of names, `stepper` for a small count,
+knob for everything else. A stepped param with many positions (octave, clock
+division) stays a knob, because sweeping through it is the point.
+
+The array order is the panel order, and `PARAM_INDEX` is derived from it with
+nothing persisting an index, so a control moves by moving its entry. The CC map
+stores param ids, not positions.
 
 `paramToNorm`, `paramFromNorm` and `snapParam` in the same file are the taper
 maths, and both the knob element and MIDI CC mapping go through them. A
 controller's travel therefore matches what the knob does under a finger,
 including the log tapers, and there is one place to change if a taper changes.
+
+### Panel
+
+`src/ui/panel.ts` builds the whole panel from `PARAMS`, one section per
+`group`, in the order the registry lists them, which is the order the signal
+flows: voice allocation, oscillators, mixer, filter, filter envelope, amp
+envelope, modulation, arpeggiator, effects bus. No layout is written out by
+hand anywhere.
+
+`ControlElement` in `src/ui/control.ts` is what the widgets share: value
+snapping, the `change` and `learn` events, the armed state and the CC label.
+`CcMap` binds by `ParamId` rather than by widget, so a switch has to be
+learnable and honour soft takeover exactly as a knob does; that contract lives
+in one place rather than four. Soft takeover needs a visual per widget: the
+knob has a tick on its rim, a switch or stepper a dot beside the label, and a
+select marks the option the dial is pointing at.
+
+The `GLOBAL` group (volume, tempo, arp) is lifted out into the transport strip
+at the top of the page, because those are played rather than set and have to
+survive a folded panel. Sections fold on a tap and what is folded lives in
+localStorage under `midi-panel-collapsed`; first run on a narrow screen opens
+only enough to make a sound, a wide screen opens everything.
+
+`VISIBLE_WHEN` hides controls that are genuinely inert: a synced LFO has no
+free rate, a poly voice never glides. Anything merely unused stays on the
+panel, because hiding on a value change moves the rest of a section under a
+finger mid-edit. `GROUP_ACTIVE` lights a dot on a heading whose section is
+doing something, which is the only way to tell with it folded.
 
 ### Synth
 
@@ -298,7 +333,10 @@ aiming at 1.3. Retrigger does not reset level, which keeps legato click-free.
 - Tests render audio offline with `test/helpers.ts` and assert on RMS, peak,
   estimated frequency, or DFT magnitude at a harmonic. A new DSP module needs
   a test that would fail if its math were wrong.
-- No UI framework. Controls are custom elements with shadow DOM.
+- No UI framework. Controls are custom elements with shadow DOM
+  (`<synth-knob>`, `<synth-switch>`, `<synth-select>`, `<synth-stepper>`), all
+  extending `ControlElement`. Document styles do not reach inside a shadow
+  root, so the panel's gesture defences are restated in `CONTROL_STYLES`.
 - Python is allowed only under `tools/` for offline analysis, with a `.env`
   file for any configuration. It is never part of the runtime.
 

@@ -103,15 +103,20 @@ export const CONTROL_STYLES = `
   /* Document styles do not reach inside a shadow root, so the gesture
      defences the panel relies on have to be restated here. They inherit from
      the host into the tree; UA styles on <button> do not, hence the rule
-     below. */
+     below. The width is a custom property so the page can run the transport
+     strip a size smaller than the panel on a phone. */
   :host { display: inline-flex; flex-direction: column; align-items: center; gap: 4px;
-          width: 72px; font: inherit; touch-action: none;
+          width: var(--control-width, 72px); font: inherit; touch-action: none;
           -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
           -webkit-tap-highlight-color: transparent; }
   button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
            cursor: pointer; -webkit-user-select: none; user-select: none;
            -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
   :host([hidden]) { display: none; }
+  /* The value line. Every control carries one, empty if it has nothing to
+     say, so that a switch and a knob side by side put their labels on the
+     same line. */
+  .readout, .state { font-size: 11px; min-height: 1.2em; color: var(--knob-readout, #f5a623); }
   .label { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--knob-label, #bbb); }
   .midi { font-size: 10px; letter-spacing: 0.04em; color: var(--knob-pot, #6ba4ff); min-height: 1.1em; }
   .midi[hidden] { display: none; }

@@ -27,8 +27,7 @@ export class SynthSwitch extends ControlElement {
                  background: var(--knob-indicator, #eee); transition: transform 120ms ease-out; }
         :host(.on) .track { background: var(--knob-arc, #f5a623); border-color: var(--knob-arc, #f5a623); }
         :host(.on) .thumb { transform: translateX(20px); background: #111; }
-        .state { font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase;
-                 color: var(--knob-readout, #f5a623); min-height: 1.2em; }
+        .state { letter-spacing: 0.04em; text-transform: uppercase; }
         :host(.armed) .track { outline: 2px solid var(--knob-pot, #6ba4ff); outline-offset: 2px; }
         :host(.learn) .track { border-color: var(--knob-pot, #6ba4ff); }
       </style>
@@ -89,7 +88,10 @@ export class SynthSelect extends ControlElement {
       <style>
         ${CONTROL_STYLES}
         :host { width: auto; min-width: 72px; }
-        .options { display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; }
+        /* Left aligned, so a segmented row starts where the knobs beside it
+           do rather than floating in the middle of the card. */
+        .options { display: flex; flex-wrap: wrap; gap: 2px; justify-content: flex-start; }
+        :host { align-items: flex-start; }
         .option { font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase;
                   padding: 6px 7px; min-height: 26px; border-radius: 3px;
                   border: 1px solid var(--knob-rim, #555); color: var(--knob-label, #bbb);
@@ -102,6 +104,7 @@ export class SynthSelect extends ControlElement {
       </style>
       <div class="options"></div>
       <span class="label"></span>
+      <span class="state"></span>
       <span class="waiting"></span>
       <span class="midi" hidden></span>
     `;
@@ -129,6 +132,11 @@ export class SynthSelect extends ControlElement {
       this.options.appendChild(button);
       this.buttons.push(button);
     }
+    // A row of words (waveforms, arpeggiator modes) takes a line of its own
+    // rather than wrapping raggedly around the knobs beside it. A row of
+    // numbers is short enough to sit among them.
+    const characters = this.buttons.reduce((sum, b) => sum + (b.textContent?.length ?? 0), 0);
+    this.classList.toggle("wide", characters > 12);
   }
 
   protected draw(): void {
@@ -180,6 +188,7 @@ export class SynthStepper extends ControlElement {
         <button class="step up" type="button">+</button>
       </div>
       <span class="label"></span>
+      <span class="state"></span>
       <span class="waiting"></span>
       <span class="midi" hidden></span>
     `;

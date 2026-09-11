@@ -58,7 +58,23 @@ start audio without a click, so the button is not optional.
 | Sustain pedal | A pedal on MIDI CC 64, or hold space. The keyboard outline lights while it is down. |
 
 Knobs: drag up and down, hold Shift for fine control, double-click to reset,
-scroll wheel for stepped changes.
+scroll wheel for stepped changes. Anything with two states is a switch and
+anything with a short list of choices is a row of buttons, so both are one tap
+rather than a drag.
+
+The panel is a stack of sections laid out the way the signal flows: how notes
+are allocated, then the oscillators and mixer, the filter and its envelope, the
+amp envelope, modulation, the arpeggiator, and last the effects bus. Tap a
+section heading to fold it away; what is folded is remembered. A dot beside a
+heading means that section is doing something, which is how you can tell with
+it folded. On a phone the panel opens with VCO 1, MIXER and VCF unfolded and
+the rest as a list of headings, and the keys stay pinned to the bottom of the
+screen.
+
+Volume, Tempo and Arp sit in the strip at the top, pinned there because they
+are played rather than set. Controls that cannot do anything in the current
+patch are not shown: Glide is poly's business to ignore, Voices is mono's, and
+a synced Rate is a Div.
 
 ## Oscillators and mixer
 
@@ -76,7 +92,7 @@ stays an octave down wherever VCO 1 is set. Noise is white, and every voice has
 its own, so a chord is eight noise sources rather than one played loudly.
 
 Levels sum straight, as a real mixer does: four sources at full is four times
-one source, and MASTER → Volume is where you take that back.
+one source, and Volume is where you take that back.
 
 ## LFO and modulation
 
@@ -113,7 +129,7 @@ the oscillator and before the amplifier.
 | VCF → Drive | Pushes the filter's saturator. Small signals stay at the same level; loud ones compress and grow harmonics |
 | VCF → Key | How much the cutoff follows the keyboard, so high notes stay as bright as low ones. Fully up tracks the pitch exactly |
 | VCF → EG Int | How far the filter envelope moves the cutoff, up to six octaves either way. Negative closes the filter as the envelope opens |
-| VCF → HP Cut | Two-pole high-pass on the whole instrument. Fully down it is out of the circuit |
+| BUS → HP Cut | Two-pole high-pass on the whole instrument, ahead of the effects. Fully down it is out of the circuit |
 | VCF EG | A second ADSR wired only to the cutoff. Short decay with EG Int up is the classic plucked bass |
 
 ## Effects
@@ -125,7 +141,7 @@ are worth hearing on headphones.
 |---|---|
 | DELAY → Time | 20 ms to 2 s. Turning it while repeats are ringing glides their pitch, like a tape delay |
 | DELAY → Sync | Take the time from the tempo instead of the Time knob |
-| DELAY → Div | Which division to sync to, from a whole note to 1/32, dotted and triplet included. Set to the same division as CLOCK → Rate and the delay lands on the arpeggiator's steps |
+| DELAY → Div | Which division to sync to, from a whole note to 1/32, dotted and triplet included. Set to the same division as ARP → Rate and the delay lands on the arpeggiator's steps |
 | DELAY → Feedback | How many repeats. Each crossing loses a little top end, so they darken as they go |
 | DELAY → Mix | How much delay to add. At zero the delay is out of the circuit entirely |
 | REVERB → Size | Small bright room through to a long hall. The level stays put as you turn it |
@@ -134,7 +150,7 @@ are worth hearing on headphones.
 
 Repeats alternate between the channels: first left, then right, then back
 again. Both mixes add to the dry signal rather than fading it away, so turning
-them up adds level: a large room at a high mix wants MASTER → Volume down.
+them up adds level: a large room at a high mix wants Volume down.
 
 ## Voices
 
@@ -152,7 +168,7 @@ The pedal holds whatever the keys let go of. With the arpeggiator running it
 holds the chord, like a momentary version of ARP → Latch.
 
 Voices are summed straight, so a big chord at a high master volume can reach
-the output ceiling. MASTER → Volume is the headroom control until the ladder
+the output ceiling. Volume is the headroom control until the ladder
 filter and its drive stage arrive.
 
 ## MIDI control
@@ -185,16 +201,16 @@ mapped; CC 64 stays the sustain pedal and cannot be reassigned.
 
 ## Arpeggiator
 
-Turn **ARP → Arp** on and hold a chord. The lamp beside **Start audio** blinks
+Turn **Arp** on in the top strip and hold a chord. The lamp beside **Start audio** blinks
 on every step and brightens on each count of four, and the on-screen keys light
 up in blue as the pattern plays them.
 
 | Knob | What it does |
 |---|---|
-| CLOCK → Tempo | 30 to 300 bpm |
-| CLOCK → Rate | Step length, from a whole note down to 1/32, including dotted and triplet divisions |
-| CLOCK → Swing | Delays every second step. 33% is the classic 2:1 triplet shuffle, 0% is straight |
-| CLOCK → Gate | How much of each step sounds. Turn it fully up to tie the steps together, which makes the arpeggio glide instead of retriggering |
+| Tempo | 30 to 300 bpm, in the strip at the top. The LFO and the delay sync to it too |
+| ARP → Rate | Step length, from a whole note down to 1/32, including dotted and triplet divisions |
+| ARP → Swing | Delays every second step. 33% is the classic 2:1 triplet shuffle, 0% is straight |
+| ARP → Gate | How much of each step sounds. Turn it fully up to tie the steps together, which makes the arpeggio glide instead of retriggering |
 | ARP → Mode | `up`, `down`, `up-down`, `down-up`, `as played`, `random` |
 | ARP → Range | How many octaves the chord is stacked over |
 | ARP → Ratchet | Repeats each step 2, 3, or 4 times inside its own slot |

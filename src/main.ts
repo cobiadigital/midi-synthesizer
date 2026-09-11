@@ -29,18 +29,24 @@ const startButton = document.getElementById("start") as HTMLButtonElement;
 const learnButton = document.getElementById("learn") as HTMLButtonElement;
 const status = document.getElementById("status") as HTMLElement;
 const panelRoot = document.getElementById("panel") as HTMLElement;
+const globalsRoot = document.getElementById("globals") as HTMLElement;
 const keyboardRoot = document.getElementById("keyboard") as HTMLElement;
 const beatLed = document.getElementById("beat") as HTMLElement;
 
-const panel = new Panel(panelRoot, patch, {
-  change: (id, value) => {
-    setParam(id, value);
-    // Moved by hand, so its dial has to pick the knob up again rather than
-    // yanking the value back where the pot happens to be sitting.
-    ccMap.release(id);
-    panel.setPot(id, null);
+const panel = new Panel({
+  container: panelRoot,
+  globals: globalsRoot,
+  patch,
+  handlers: {
+    change: (id, value) => {
+      setParam(id, value);
+      // Moved by hand, so its dial has to pick the knob up again rather than
+      // yanking the value back where the pot happens to be sitting.
+      ccMap.release(id);
+      panel.setPot(id, null);
+    },
+    learn: (id) => armFor(id),
   },
-  learn: (id) => armFor(id),
 });
 
 function setParam(id: ParamId, value: number): void {
