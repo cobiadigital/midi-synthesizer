@@ -1,11 +1,12 @@
 import { AudioEngine } from "./audio-engine";
-import { defaultPatch, type ParamId } from "./dsp/params";
+import { defaultPatch, type ParamId, type PatchValues } from "./dsp/params";
 import type { SynthEvent } from "./dsp/synth";
 import { CcMap, SUSTAIN_CC } from "./midi/cc-map";
 import { KeyboardInput } from "./midi/keyboard-input";
 import { MidiInput } from "./midi/midi-input";
 import { ScreenKeyboard } from "./ui/keyboard";
 import { Panel } from "./ui/panel";
+import { ShareLink } from "./ui/share";
 import "./style.css";
 
 // Last line of defence for the panel and keyboard: WebKit can still anchor a
@@ -20,13 +21,16 @@ document.addEventListener("selectstart", (event) => {
 const STORAGE_KEY = "midi-cc-map";
 
 const engine = new AudioEngine();
-const patch = defaultPatch();
+// A shared link is the patch: whatever it carries sits on top of the factory
+// values, and what it does not carry stays at the factory value.
+const patch = { ...defaultPatch(), ...ShareLink.initialPatch() };
 const ccMap = loadCcMap();
 let learning = false;
 let armed: ParamId | null = null;
 
 const startButton = document.getElementById("start") as HTMLButtonElement;
 const learnButton = document.getElementById("learn") as HTMLButtonElement;
+const shareButton = document.getElementById("share") as HTMLButtonElement;
 const status = document.getElementById("status") as HTMLElement;
 const panelRoot = document.getElementById("panel") as HTMLElement;
 const keyboardRoot = document.getElementById("keyboard") as HTMLElement;
@@ -50,7 +54,37 @@ const panel = new Panel({
 function setParam(id: ParamId, value: number): void {
   patch[id] = value;
   engine.setParam(id, value);
+  // Whatever moved a control, the link in the bar is the sound being heard.
+  share.schedule();
 }
+
+/**
+ * Apply a whole patch that came from somewhere other than the panel: a link
+ * pasted into the running page. Every param has to release its CC binding,
+ * exactly as a knob dragged by hand does, or the next twitch of a dial yanks
+ * a value back to where that pot happens to be sitting.
+ */
+function loadPatch(values: PatchValues): void {
+  for (const [key, value] of Object.entries(values)) {
+    const id = key as ParamId;
+    patch[id] = value;
+    engine.setParam(id, value);
+    ccMap.release(id);
+  }
+  panel.setPatch(patch);
+  panel.clearPots();
+}
+
+const share = new ShareLink({
+  patch,
+  onIncoming: (values) => {
+    loadPatch({ ...defaultPatch(), ...values });
+    setIdleStatus("Patch loaded from the link.");
+  },
+  onStatus: setIdleStatus,
+});
+
+shareButton.addEventListener("click", () => void share.share());
 
 const screenKeyboard = new ScreenKeyboard(keyboardRoot, {
   noteOn: (note, velocity) => noteOn(note, velocity),
@@ -247,5 +281,5 @@ async function connectMidi(): Promise<void> {
   }
 }
 
-// Keep the knob panel in sync if presets get loaded later.
+// Keep the knob panel in sync with the patch the link was opened on.
 panel.setPatch(patch);

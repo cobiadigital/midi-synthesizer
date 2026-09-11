@@ -133,7 +133,7 @@ h1 small {
 
 /* Outlined rather than filled, so it reads as secondary to Start audio. It is
    a mode, so it holds a lit state while learning. */
-#learn {
+#learn, #share {
   background: transparent;
   color: var(--muted);
   border: 1px solid var(--panel-edge);
@@ -335,7 +335,7 @@ body:not(.audio-on) .screen-keyboard {
   h1 small { display: none; }
 
   header { gap: 8px; padding: 2px 0 8px; }
-  #start, #learn { padding: 8px 12px; font-size: 11px; }
+  #start, #learn, #share { padding: 8px 12px; font-size: 11px; }
 
   #status { font-size: 11px; margin-bottom: 10px; }
 
