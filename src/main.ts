@@ -4,6 +4,7 @@ import type { SynthEvent } from "./dsp/synth";
 import { CcMap, SUSTAIN_CC } from "./midi/cc-map";
 import { KeyboardInput } from "./midi/keyboard-input";
 import { MidiInput } from "./midi/midi-input";
+import { AboutSheet } from "./ui/about";
 import { ScreenKeyboard } from "./ui/keyboard";
 import { Panel } from "./ui/panel";
 import { ShareLink } from "./ui/share";
@@ -31,6 +32,14 @@ let armed: ParamId | null = null;
 const startButton = document.getElementById("start") as HTMLButtonElement;
 const learnButton = document.getElementById("learn") as HTMLButtonElement;
 const shareButton = document.getElementById("share") as HTMLButtonElement;
+
+// What this is, how to play it, and where the source lives. The title opens it.
+new AboutSheet({
+  button: document.getElementById("about") as HTMLButtonElement,
+  sheet: document.getElementById("about-sheet") as HTMLElement,
+  backdrop: document.getElementById("about-backdrop") as HTMLElement,
+  close: document.getElementById("about-close") as HTMLButtonElement,
+});
 const status = document.getElementById("status") as HTMLElement;
 const panelRoot = document.getElementById("panel") as HTMLElement;
 const keyboardRoot = document.getElementById("keyboard") as HTMLElement;

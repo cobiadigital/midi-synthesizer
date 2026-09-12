@@ -205,6 +205,33 @@ the next twitch of a dial yanking values back.
 The codec is what milestone 4's presets need too: a preset is the same
 `PatchValues` through the same two functions, stored rather than pasted.
 
+### About sheet and icons
+
+`src/ui/about.ts` is a bottom sheet holding what the instrument is, how to play
+it, how to install it, and the links out (Ko-fi, the repo, benbrenner.com). The
+**title** is what opens it, the same handle the weather app uses: an app's name
+is what people press when they want to know what they are looking at, and the
+header has no room for another button.
+
+Closed, it keeps `inert` rather than `display: none`, so it stays off the tab
+order and away from a screen reader while still being able to slide. Only a
+real close hands focus back to the title; the initial state is applied without
+touching focus, or a fresh load would put a focus ring on the header before
+anyone had touched anything. Its body carries `.selectable`, because the
+universal `user-select: none` that protects the panel from iOS long-press would
+otherwise make the sheet's text impossible to copy.
+
+`public/icons/` holds the PWA icons, generated from `public/icon.svg` with the
+mark unchanged since the scaffold. The manifest previously listed only the SVG,
+which is why the mark never reached a home screen: **iOS ignores the manifest's
+icons entirely** and reads `<link rel="apple-touch-icon">`, which did not
+exist, so adding to the home screen produced a screenshot of the page. There
+are now four: 192 and 512 as `any` (rounded, since they are shown as drawn in
+install prompts), a 512 `maskable` with the mark scaled to 76% so Android's
+circular crop cannot clip it, and a 180 for iOS with no rounding of its own,
+because iOS applies its own. Regenerate them with the browser rather than by
+hand if the mark ever changes.
+
 ### Clock and arpeggiator
 
 `StepClock` in `src/dsp/clock.ts` owns tempo, division, swing and ratcheting.
