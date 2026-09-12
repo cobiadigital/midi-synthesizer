@@ -77,6 +77,7 @@ function loadPatch(values: PatchValues): void {
 
 const share = new ShareLink({
   patch,
+  button: shareButton,
   onIncoming: (values) => {
     loadPatch({ ...defaultPatch(), ...values });
     setIdleStatus("Patch loaded from the link.");

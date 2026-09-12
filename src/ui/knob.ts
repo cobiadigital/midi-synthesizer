@@ -1,4 +1,4 @@
-import { paramFromNorm, paramToNorm } from "../dsp/params";
+import { formatParamValue, paramFromNorm, paramToNorm } from "../dsp/params";
 import { CONTROL_STYLES, ControlElement } from "./control";
 
 /**
@@ -153,7 +153,7 @@ export class SynthKnob extends ControlElement {
     const angle = -135 + norm * 270;
     this.indicator.setAttribute("transform", `rotate(${angle} 26 26)`);
     this.arc.setAttribute("d", describeArc(0, norm));
-    this.readout.textContent = this.format();
+    this.readout.textContent = formatParamValue(this.def, this._value);
     this.setAttribute("aria-valuenow", String(this._value));
   }
 
