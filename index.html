@@ -6,11 +6,20 @@
     <meta name="theme-color" content="#141414" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/icons/icon-192.png" sizes="192x192" type="image/png" />
+    <!-- iOS ignores the manifest's icons entirely and reads only this, which
+         is why the mark never reached anyone's home screen before. -->
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <title>Poly Synth</title>
   </head>
   <body>
     <header>
-      <h1>Poly Synth <small>Subtractive synthesizer in the browser</small></h1>
+      <h1>
+        <button id="about" class="title-button" type="button" aria-expanded="false" aria-controls="about-sheet">
+          <span class="title-name">Poly Synth <span class="title-info" aria-hidden="true">i</span></span>
+          <small>Subtractive synthesizer in the browser</small>
+        </button>
+      </h1>
       <div class="transport">
         <span id="beat" class="beat-led" role="img" aria-label="Arpeggiator step indicator"></span>
         <button id="share" type="button">Share</button>
@@ -21,6 +30,66 @@
     <p id="status" class="selectable">Click Start audio, then play a MIDI keyboard, the on-screen keys, or A through K.</p>
     <main id="panel"></main>
     <div id="keyboard"></div>
+
+    <div id="about-backdrop" class="sheet-backdrop"></div>
+    <section id="about-sheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="about-title">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <div class="sheet-head">
+        <h2 id="about-title">About Poly Synth</h2>
+        <button id="about-close" class="icon-btn" type="button" aria-label="Close">✕</button>
+      </div>
+      <div class="sheet-body selectable">
+        <p>
+          An eight-voice subtractive synthesizer that runs entirely in your browser. Two oscillators,
+          a sub and noise into a four-pole ladder filter with drive, two envelopes, an LFO, an
+          arpeggiator, and a stereo delay and reverb. The panel follows a Korg Minilogue; the filter
+          follows a Moog.
+        </p>
+
+        <h3>Playing it</h3>
+        <ul>
+          <li>Press <strong>Start audio</strong> first. Browsers will not make a sound before you ask.</li>
+          <li>Plug in a MIDI keyboard, tap the on-screen keys, or play <strong>A</strong> through <strong>K</strong> on a computer keyboard.</li>
+          <li>Turn a knob and the address bar follows. <strong>Share</strong> sends that patch as a link and a picture.</li>
+        </ul>
+
+        <h3>Installing it</h3>
+        <p>
+          On iPhone, tap the browser's Share button and then <strong>Add to Home Screen</strong>. On
+          Android, open the browser menu and tap <strong>Install app</strong>. It runs full screen
+          and keeps working offline once loaded.
+        </p>
+
+        <div class="info-links">
+          <a class="info-link" href="https://ko-fi.com/benbrenner" target="_blank" rel="noopener">
+            <span class="info-link-ico" aria-hidden="true">☕</span>
+            <span class="info-link-text">
+              <span class="info-link-title">Support on Ko-fi</span>
+              <span class="info-link-desc">Help pay for the server costs</span>
+            </span>
+            <span class="info-link-chevron" aria-hidden="true">›</span>
+          </a>
+          <a class="info-link" href="https://github.com/cobiadigital/midi-synthesizer" target="_blank" rel="noopener">
+            <span class="info-link-ico" aria-hidden="true">⌥</span>
+            <span class="info-link-text">
+              <span class="info-link-title">Source on GitHub</span>
+              <span class="info-link-desc">github.com/cobiadigital/midi-synthesizer</span>
+            </span>
+            <span class="info-link-chevron" aria-hidden="true">›</span>
+          </a>
+          <a class="info-link" href="https://benbrenner.com" target="_blank" rel="noopener">
+            <span class="info-link-ico" aria-hidden="true">🌐</span>
+            <span class="info-link-text">
+              <span class="info-link-title">More info &amp; other apps</span>
+              <span class="info-link-desc">benbrenner.com</span>
+            </span>
+            <span class="info-link-chevron" aria-hidden="true">›</span>
+          </a>
+        </div>
+
+        <p class="credit">Developed by Ben Brenner with Claude on Cloudflare.</p>
+      </div>
+    </section>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

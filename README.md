@@ -35,6 +35,12 @@ Milestone 1 of 5, plus the arpeggiator from milestone 5. Current features:
 Coming next: oscillator sync, ring mod and cross mod, saved presets, chorus.
 See [CLAUDE.md](./CLAUDE.md) for the roadmap and architecture.
 
+## About and support
+
+The title in the header opens an About sheet: what the instrument is, how to
+play it, how to install it as an app, and links to the source, to Ko-fi, and to
+benbrenner.com.
+
 ## Requirements
 
 - Node.js 20 or newer
@@ -352,10 +358,11 @@ npm run deploy:version  # upload a preview version instead
 src/dsp/        Pure TypeScript signal processing, no browser APIs
 src/worklet/    AudioWorkletProcessor that hosts the synth on the audio thread
 src/midi/       Web MIDI and computer keyboard input
-src/ui/         Knob custom element, panel builder, on-screen keyboard
+src/ui/         Knob custom element, panel builder, on-screen keyboard, About sheet
 src/patch-url.ts  Patch to text and back, for shareable links and presets
 src/patch-preview.ts  A patch rendered to audio offline, for the share card
 src/presets/    Patch JSON (empty until milestone 4)
+public/icons/   PWA icons: 192, 512, maskable 512, and the iOS touch icon
 test/           Vitest suite that renders audio offline and checks it
 tools/          Optional Python analysis scripts (see tools/README.md)
 .github/        CI workflow run on pull requests
