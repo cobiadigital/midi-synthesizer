@@ -24,6 +24,8 @@ Milestone 1 of 5, plus the arpeggiator from milestone 5. Current features:
 - Sustain pedal (MIDI CC 64, or the space bar)
 - MIDI CC control of every knob, with soft takeover and on-panel learn
 - Shareable links: the whole patch lives in the URL, so a bookmark is a preset
+- Share as a picture: a patch card drawn from the panel, with the waveform the
+  patch actually makes
 - Arpeggiator with six note orders, a four-octave range, and latch
 - Sample-accurate step clock: tempo, division down to 1/32 and triplets,
   swing, gate length, and ratcheting
@@ -219,10 +221,23 @@ The address bar always holds the sound you are hearing. Every knob and switch
 on the panel is written into the page's URL fragment as you move it, so a
 bookmark is a preset and a pasted link is the patch.
 
-Press **Share** to hand one over: on a phone that opens the system share sheet,
-on a desktop it copies the link to the clipboard. Opening a link sets the whole
-panel from it, including the controls it does not mention, which sit at their
-factory values.
+Press **Share** to hand one over. On a phone that opens the system share sheet
+with two things in it: a picture of the patch, and the link as the caption. On
+a desktop, which mostly cannot share files, the link goes to the clipboard and
+the picture is saved to your downloads. Opening a link sets the whole panel
+from it, including the controls it does not mention, which sit at their factory
+values.
+
+The picture is a patch card: the controls this patch moved, drawn as the panel
+draws them, under a waveform rendered from the patch itself. It is not a
+screenshot. Every control on the panel is a custom element with a shadow root,
+which the screenshot libraries cannot see into, so the card is drawn from the
+same registry the panel is built from. That also lets it show only what you
+changed, which is the interesting part, and print the peak level so a patch
+running hot is visible.
+
+Take the picture as a picture: it carries no data, and the link beside it is
+what opens the patch.
 
 A link looks like this, and is about 200 characters for a patch with a dozen
 knobs moved:
@@ -344,9 +359,10 @@ src/dsp/        Pure TypeScript signal processing, no browser APIs
 src/worklet/    AudioWorkletProcessor that hosts the synth on the audio thread
 src/midi/       Web MIDI and computer keyboard input
 src/ui/         Knob custom element, panel builder, on-screen keyboard, About sheet
-public/icons/   PWA icons: 192, 512, maskable 512, and the iOS touch icon
 src/patch-url.ts  Patch to text and back, for shareable links and presets
+src/patch-preview.ts  A patch rendered to audio offline, for the share card
 src/presets/    Patch JSON (empty until milestone 4)
+public/icons/   PWA icons: 192, 512, maskable 512, and the iOS touch icon
 test/           Vitest suite that renders audio offline and checks it
 tools/          Optional Python analysis scripts (see tools/README.md)
 .github/        CI workflow run on pull requests

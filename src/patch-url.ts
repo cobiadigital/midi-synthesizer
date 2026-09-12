@@ -39,20 +39,32 @@ function formatValue(def: ParamDef, value: number): string {
 }
 
 /**
- * The patch as fragment text, or "" when nothing differs from the factory
- * patch. Compared after formatting, so a knob nudged inside the rounding does
- * not lengthen the link.
+ * What this patch changes from the factory one, in panel order. Compared after
+ * formatting, so a knob nudged inside the rounding counts as untouched.
+ *
+ * This is what the link carries, and it is also what the shared image draws,
+ * so the two say the same thing about a patch by construction rather than by
+ * two lists being kept in step.
  */
-export function encodePatch(patch: Partial<PatchValues>): string {
-  const parts: string[] = [];
+export function changedParams(patch: Partial<PatchValues>): ParamId[] {
+  const ids: ParamId[] = [];
   for (const def of PARAMS) {
     const value = patch[def.id];
     if (value === undefined || !Number.isFinite(value)) continue;
-    const text = formatValue(def, value);
-    if (text === formatValue(def, def.default)) continue;
-    parts.push(`${def.id}:${text}`);
+    if (formatValue(def, value) === formatValue(def, def.default)) continue;
+    ids.push(def.id);
   }
-  return parts.join(",");
+  return ids;
+}
+
+/**
+ * The patch as fragment text, or "" when nothing differs from the factory
+ * patch.
+ */
+export function encodePatch(patch: Partial<PatchValues>): string {
+  return changedParams(patch)
+    .map((id) => `${id}:${formatValue(paramDef(id), patch[id] ?? 0)}`)
+    .join(",");
 }
 
 /**

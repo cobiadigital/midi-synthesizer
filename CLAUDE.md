@@ -205,6 +205,44 @@ the next twitch of a dial yanking values back.
 The codec is what milestone 4's presets need too: a preset is the same
 `PatchValues` through the same two functions, stored rather than pasted.
 
+### The share card
+
+`ShareLink.share()` hands over a picture and a link together, the shape the
+weather app's `shareView()` established: draw a canvas, wrap it in a `File`,
+gate on `navigator.canShare({ files })`, and fall back to the clipboard and a
+download where file sharing is not supported. The link goes in the share's
+`text` as a full URL and **never** in `url`: iOS treats a share with `url` set
+as a link share and drops the attachment, so the picture would not arrive.
+
+`src/ui/patch-card.ts` draws the card rather than capturing the page. Every
+control is a custom element with a shadow root, and the DOM capture libraries
+cannot see inside one, so a screenshot of the panel would come out as a grid
+of empty boxes. Drawing it costs nothing extra and buys what a screenshot
+cannot do: only the controls this patch moved, laid out in packed columns
+whatever the patch, at whatever size that needs.
+
+What counts as moved is `changedParams` from `patch-url.ts`, filtered by
+`isControlVisible` from `panel.ts`. Both are deliberate: the card and the link
+carry the same list by construction rather than by two lists being kept in
+step, and a control the panel hides as inert (a synced LFO's free rate) is not
+on the card either. `formatParamValue` lives in `params.ts` for the same
+reason: the knob and the card both write values, and two copies would drift
+apart one unit at a time.
+
+`src/patch-preview.ts` is the waveform: a throwaway `Synth` on the main thread
+playing a four-note chord through the patch, held past the attack and released,
+under two seconds by construction. It is pure and has no DOM in it, so it tests
+offline like the rest of the DSP. Two consequences worth knowing:
+
+- It puts a second copy of the DSP core in the main bundle, which is most of
+  why that bundle went from 11.5 kB gzipped to 21.2. The alternative, asking
+  the worklet for a buffer of what it just played, needs audio running and a
+  note held, and draws a flat line the rest of the time.
+- Four voices summed straight peak near 1.9 on the factory patch, so the card
+  scales the drawing to the peak, draws the full-scale lines, and prints the
+  number. That is the instrument being honest about its headroom, not a bug in
+  the preview.
+
 ### About sheet and icons
 
 `src/ui/about.ts` is a bottom sheet holding what the instrument is, how to play
@@ -468,7 +506,8 @@ Setup steps for the dashboard live in README.md.
 4. **MIDI CC learn done**: eight dials mapped out of the box (CC 21 to 28, as
    a Launchkey Mini sends), soft takeover, and learn from the panel, saved to
    localStorage. **Shareable links done**: the whole patch in the URL
-   fragment, live as you turn a knob, with a Share button. Still to do: preset
+   fragment, live as you turn a knob, and a Share button that sends the link
+   with a drawn patch card. Still to do: preset
    save and load (JSON in localStorage, factory bank in `src/presets/`, both
    on `patch-url`'s codec), PWA service worker for offline use.
 5. Polyphony **done**: eight-voice pool with note stealing, a mono/poly

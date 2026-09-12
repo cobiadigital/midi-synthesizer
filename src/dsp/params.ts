@@ -252,6 +252,28 @@ export function paramFromNorm(def: ParamDef, norm: number): number {
   return snapParam(def, value);
 }
 
+/**
+ * The label a discrete value carries, or the number itself for a param with
+ * no names for its positions.
+ */
+export function choiceLabel(def: ParamDef, value: number): string {
+  return def.choices?.[Math.round(value - def.min)] ?? String(value);
+}
+
+/**
+ * A value as the panel writes it. It lives here rather than in the knob
+ * because the knob is no longer the only thing that draws a param: the shared
+ * patch card draws the same controls onto a canvas, and two copies of this
+ * would drift apart one unit at a time.
+ */
+export function formatParamValue(def: ParamDef, value: number): string {
+  if (def.choices || def.step) return choiceLabel(def, value);
+  // Three significant figures, near enough, so a readout never outgrows the
+  // control's width.
+  const text = value >= 100 ? value.toFixed(0) : value >= 10 ? value.toFixed(1) : value.toFixed(2);
+  return def.unit ? `${text} ${def.unit}` : text;
+}
+
 export type PatchValues = Record<ParamId, number>;
 
 export function defaultPatch(): PatchValues {

@@ -42,6 +42,15 @@ const VISIBLE_WHEN: Partial<Record<ParamId, (p: PatchValues) => boolean>> = {
 };
 
 /**
+ * Whether a control does anything in this patch. Exported because the shared
+ * patch card draws the same controls and has to make the same call: a synced
+ * LFO's free rate is not on the panel, so it is not on the card either.
+ */
+export function isControlVisible(id: ParamId, patch: PatchValues): boolean {
+  return VISIBLE_WHEN[id]?.(patch) ?? true;
+}
+
+/**
  * Sections that are plainly doing something or not, shown as a lit dot on the
  * heading. With a section collapsed that dot is the only way to tell, and it
  * answers the question a folded panel otherwise raises: is anything on in
@@ -174,10 +183,7 @@ export class Panel {
 
   /** Apply everything that depends on the patch: what is inert, what is lit. */
   private refresh(): void {
-    for (const [id, knob] of this.knobs) {
-      const visible = VISIBLE_WHEN[id]?.(this.patch) ?? true;
-      knob.hidden = !visible;
-    }
+    for (const [id, knob] of this.knobs) knob.hidden = !isControlVisible(id, this.patch);
     for (const [group, section] of this.sections) {
       section.classList.toggle("active", GROUP_ACTIVE[group]?.(this.patch) ?? false);
     }
